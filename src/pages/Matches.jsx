@@ -3,10 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { safeGet } from '../lib/storage'
 
+// Fix #5: anchor must be in the DOM for Firefox to trigger the download
 function triggerDownload(filename, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type }))
   const a = Object.assign(document.createElement('a'), { href: url, download: filename })
+  document.body.appendChild(a)
   a.click()
+  document.body.removeChild(a)
   setTimeout(() => URL.revokeObjectURL(url), 100)
 }
 
@@ -25,7 +28,7 @@ function exportVCard(card) {
   triggerDownload(`${safeName}.vcf`, vcf, 'text/vcard')
 }
 
-// Fix #1: accept myCardId as param instead of re-reading from localStorage
+// Fix #4: use resolveTheirCard so null-myCardId is handled correctly
 function exportCSV(matches, myCardId) {
   const sanitize = (val = '') => {
     const s = String(val).replace(/"/g, '""')
@@ -33,16 +36,12 @@ function exportCSV(matches, myCardId) {
   }
   const header = 'Name,Project,Need,Offer,Icebreaker,Status'
   const rows = matches.map((match) => {
-    const theirSnapshot = myCardId && match.card_a === myCardId
-      ? match.card_b_snapshot
-      : match.card_a_snapshot
-    const c = theirSnapshot ?? match.card_b_snapshot
+    const c = resolveTheirCard(match, myCardId)
     return `"${sanitize(c?.name)}","${sanitize(c?.project)}","${sanitize(c?.need)}","${sanitize(c?.offer)}","${sanitize(match.icebreaker)}","${sanitize(match.status)}"`
   })
   triggerDownload('vibecheck-matches.csv', [header, ...rows].join('\n'), 'text/csv')
 }
 
-// Fix #3: resolve theirCard correctly even when myCardId is null
 function resolveTheirCard(match, myCardId) {
   if (!myCardId) return match.card_b_snapshot ?? match.card_a_snapshot
   return match.card_a === myCardId ? match.card_b_snapshot : match.card_a_snapshot
@@ -59,7 +58,6 @@ function MatchCard({ match, myCardId }) {
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-2xl">{theirCard?.emoji}</span>
@@ -73,20 +71,17 @@ function MatchCard({ match, myCardId }) {
         </span>
       </div>
 
-      {/* Need / Offer */}
       <div className="space-y-1">
         <p className="text-white/50 text-xs">Needs: {theirCard?.need}</p>
         <p className="text-white/50 text-xs">Offers: {theirCard?.offer}</p>
       </div>
 
-      {/* Icebreaker */}
       {match.icebreaker && (
         <div className="bg-white/5 rounded-xl p-3">
           <p className="text-white/70 text-sm italic">"{match.icebreaker}"</p>
         </div>
       )}
 
-      {/* Fix #2: guard exportVCard when snapshot is missing */}
       {theirCard ? (
         <button
           onClick={() => exportVCard(theirCard)}
@@ -126,59 +121,85 @@ export default function Matches() {
   const navigate = useNavigate()
   const myCardId = safeGet('my_card_id')
 
-  const [matches, setMatches] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
+  const [matches, setMatches]         = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(null)
+  // Fix #1: track whether myCardId actually belongs to this event
+  const [cardMismatch, setCardMismatch] = useState(false)
 
-  // Fix #6: wrap fetch in useCallback so it can be reused by retry + realtime
   const fetchMatches = useCallback(async () => {
     setLoading(true)
     setError(null)
 
-    // Fix #5: scope query to eventId via the card snapshots' event context
-    // matches table doesn't have event_id directly — filter via vibe_cards join
-    const { data, error: err } = await supabase
-      .from('matches')
-      .select('*, card_a_ref:vibe_cards!card_a(event_id), card_b_ref:vibe_cards!card_b(event_id)')
-      .or(`card_a.eq.${myCardId},card_b.eq.${myCardId}`)
-      .eq('card_a_ref.event_id', eventId)
-      .order('created_at', { ascending: false })
+    // Fix #1: validate card belongs to this event and fetch matches in parallel
+    // Avoids sequential round-trips while still catching stale localStorage
+    const [cardRes, matchRes] = await Promise.all([
+      supabase
+        .from('vibe_cards')
+        .select('event_id')
+        .eq('id', myCardId)
+        .single(),
+      supabase
+        .from('matches')
+        .select('*')
+        .or(`card_a.eq.${myCardId},card_b.eq.${myCardId}`)
+        .order('created_at', { ascending: false }),
+    ])
 
-    if (err) {
-      setError('Failed to load matches.')
-    } else {
-      setMatches(data ?? [])
-    }
-    setLoading(false)
-  }, [myCardId, eventId])
-
-  useEffect(() => {
-    // Fix #4: don't silently show "No matches" when there's no card
-    if (!myCardId) {
+    // Card not found or belongs to a different event — stale localStorage
+    if (cardRes.error || cardRes.data?.event_id !== eventId) {
+      setCardMismatch(true)
       setLoading(false)
       return
     }
 
-    fetchMatches()
+    if (matchRes.error) {
+      setError('Failed to load matches.')
+    } else {
+      setMatches(matchRes.data ?? [])
+    }
+    setLoading(false)
+  }, [myCardId, eventId])
 
-    // Fix #6: subscribe to UPDATE events so status changes reflect live
+  // Fix #3: separate fetch effect from subscription effect — no coupling
+  useEffect(() => {
+    if (!myCardId) {
+      setLoading(false)
+      return
+    }
+    fetchMatches()
+  }, [myCardId, eventId, fetchMatches])
+
+  useEffect(() => {
+    if (!myCardId) return
+
+    // Fix #2: only merge mutable fields from realtime UPDATE payload
+    // Realtime rows don't include joined columns — spreading would drop them
+    const handleUpdate = ({ new: updated }) => {
+      setMatches(prev => prev.map(m =>
+        m.id === updated.id
+          ? { ...m, status: updated.status, icebreaker: updated.icebreaker }
+          : m
+      ))
+    }
+
     const channel = supabase
       .channel(`matches-page-${myCardId}`)
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'matches', filter: `card_a=eq.${myCardId}` },
-        ({ new: updated }) => setMatches(prev => prev.map(m => m.id === updated.id ? { ...m, ...updated } : m))
+        handleUpdate
       )
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'matches', filter: `card_b=eq.${myCardId}` },
-        ({ new: updated }) => setMatches(prev => prev.map(m => m.id === updated.id ? { ...m, ...updated } : m))
+        handleUpdate
       )
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [myCardId, fetchMatches])
+  }, [myCardId])
 
-  // Fix #4: dedicated no-card state
-  if (!myCardId) {
+  // No card in localStorage at all
+  if (!myCardId || cardMismatch) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center px-4">
         <div className="text-center space-y-2">
@@ -224,11 +245,10 @@ export default function Matches() {
         </button>
       )}
 
-      {/* States */}
       {loading && <MatchesSkeleton />}
 
-      {/* Fix #7: error state with retry button */}
-      {error && (
+      {/* Fix #6: !loading guard makes error and skeleton mutually exclusive */}
+      {!loading && error && (
         <div className="text-center py-16 space-y-3">
           <p className="text-red-400 text-sm">{error}</p>
           <button
