@@ -2,13 +2,25 @@
  * VibeCheck — Express proxy
  * Keeps GEMINI_API_KEY server-side. Exposes /icebreaker (SSE) and /embed.
  *
- * Run: npm run proxy
+ * Run:     npm run proxy
+ * Dev:     npm run proxy:dev
  */
 
 import express from 'express'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import { GoogleGenAI } from '@google/genai'
+
+// ---------------------------------------------------------------------------
+// Startup validation — fail fast if required env vars are missing
+// ---------------------------------------------------------------------------
+
+const REQUIRED_ENV = ['GEMINI_API_KEY']
+const missing = REQUIRED_ENV.filter(k => !process.env[k])
+if (missing.length) {
+  console.error(`[startup] Missing required env vars: ${missing.join(', ')}`)
+  process.exit(1)
+}
 
 const app  = express()
 const PORT = process.env.PORT ?? 3001
@@ -18,9 +30,20 @@ const ai   = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 // Middleware
 // ---------------------------------------------------------------------------
 
-app.use(cors({ origin: process.env.ALLOWED_ORIGIN ?? 'http://localhost:5173' }))
+// Support comma-separated or single ALLOWED_ORIGIN values
+const rawOrigins = (process.env.ALLOWED_ORIGIN ?? 'http://localhost:5174').split(',').map(s => s.trim())
+
+app.use(cors({ origin: rawOrigins }))
 app.use(express.json({ limit: '16kb' }))
 app.use(rateLimit({ windowMs: 60_000, max: 10 }))
+
+// ---------------------------------------------------------------------------
+// Health check — used by Railway and monitoring
+// ---------------------------------------------------------------------------
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() })
+})
 
 // ---------------------------------------------------------------------------
 // AI personalities
@@ -34,7 +57,7 @@ const PERSONALITIES = {
   default:     'You are a witty icebreaker generator for hackathon networking events. Be specific, human, and a little playful. Never be corporate.',
 }
 
-const OUTPUT_RULE = " Write exactly 2 short sentences. Reference both people's actual projects. Max 150 tokens."
+const OUTPUT_RULE = ' Write exactly 2 short sentences. Reference both people\'s actual projects. Max 150 tokens.'
 
 function getSystemInstruction(personality = 'default') {
   return (PERSONALITIES[personality] ?? PERSONALITIES.default) + OUTPUT_RULE
@@ -121,4 +144,8 @@ app.post('/embed', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => console.log(`Proxy running on :${PORT}`))
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
+
+app.listen(PORT, () => console.log(`[server] Proxy running on :${PORT}`))
