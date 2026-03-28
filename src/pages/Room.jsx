@@ -53,16 +53,19 @@ export default function Room() {
     navigate('/')
   }
 
-  // Resolve event code for QR — look it up from any card's event data in state,
-  // or fall back from the Supabase events table once myCard is loaded
+  // Resolve event code + name for QR and header
   const [eventCode, setEventCode] = useState(null)
+  const [eventName, setEventName] = useState(null)
   if (!eventCode && myCard) {
     supabase
       .from('events')
-      .select('code')
+      .select('code, name')
       .eq('id', eventId)
       .single()
-      .then(({ data }) => { if (data?.code) setEventCode(data.code) })
+      .then(({ data }) => {
+        if (data?.code) setEventCode(data.code)
+        if (data?.name) setEventName(data.name)
+      })
   }
 
   return (
@@ -72,7 +75,9 @@ export default function Room() {
         <div className="max-w-lg mx-auto flex items-center gap-3">
           {/* Logo / title */}
           <div className="flex-1 min-w-0">
-            <p className="font-black text-yellow-400 text-lg leading-none tracking-tight">VibeCheck</p>
+            <p className="font-black text-yellow-400 text-lg leading-none tracking-tight">
+              VibeCheck{eventName ? ` — ${eventName}` : ''}
+            </p>
             <p className="text-white/40 text-xs truncate">
               {cards.length} {cards.length === 1 ? 'person' : 'people'} in the room
             </p>
