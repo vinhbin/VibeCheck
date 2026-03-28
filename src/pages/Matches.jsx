@@ -98,8 +98,8 @@ function MatchCard({ match, myCardId }) {
 
 function MatchesSkeleton() {
   return (
-    <div className="space-y-3">
-      {Array.from({ length: 3 }).map((_, i) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3 animate-pulse">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10" />
@@ -218,69 +218,71 @@ export default function Matches() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white px-4 py-8 max-w-md mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-black text-2xl text-yellow-400">Your Matches</h1>
-          {!loading && matches.length > 0 && (
-            <p className="text-white/40 text-sm">{matches.length} connection{matches.length !== 1 ? 's' : ''}</p>
-          )}
-        </div>
-        <button
-          onClick={() => navigate(`/room/${eventId}`)}
-          className="text-sm text-white/40 hover:text-white/60 transition"
-        >
-          ← Room
-        </button>
-      </div>
-
-      {/* CSV export */}
-      {!loading && matches.length > 0 && (
-        <button
-          onClick={() => exportCSV(matches, myCardId)}
-          className="w-full mb-6 border border-yellow-400/30 text-yellow-400 text-sm font-bold py-2.5 rounded-xl hover:bg-yellow-400/10 transition"
-        >
-          Export all as CSV
-        </button>
-      )}
-
-      {loading && <MatchesSkeleton />}
-
-      {/* Fix #6: !loading guard makes error and skeleton mutually exclusive */}
-      {!loading && error && (
-        <div className="text-center py-16 space-y-3">
-          <p className="text-red-400 text-sm">{error}</p>
-          <button
-            onClick={fetchMatches}
-            className="text-sm text-white/40 hover:text-white/60 underline transition"
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {!loading && !error && matches.length === 0 && (
-        <div className="text-center py-16 space-y-2">
-          <p className="text-4xl">🎯</p>
-          <p className="text-white font-bold">No matches yet</p>
-          <p className="text-white/40 text-sm">Head back to the room and shoot your shot.</p>
+    <div className="min-h-screen bg-zinc-950 text-white">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="font-black text-2xl sm:text-3xl text-yellow-400">Your Matches</h1>
+            {!loading && matches.length > 0 && (
+              <p className="text-white/40 text-sm">{matches.length} connection{matches.length !== 1 ? 's' : ''}</p>
+            )}
+          </div>
           <button
             onClick={() => navigate(`/room/${eventId}`)}
-            className="mt-4 bg-yellow-400 text-black font-bold px-6 py-2.5 rounded-xl text-sm"
+            className="text-sm text-white/40 hover:text-white/60 transition"
           >
-            Back to room
+            ← Room
           </button>
         </div>
-      )}
 
-      {!loading && !error && matches.length > 0 && (
-        <div className="space-y-3">
-          {matches.map(match => (
-            <MatchCard key={match.id} match={match} myCardId={myCardId} />
-          ))}
-        </div>
-      )}
+        {/* CSV export */}
+        {!loading && matches.length > 0 && (
+          <button
+            onClick={() => exportCSV(matches, myCardId)}
+            className="w-full sm:w-auto sm:px-6 mb-6 border border-yellow-400/30 text-yellow-400 text-sm font-bold py-2.5 rounded-xl hover:bg-yellow-400/10 transition"
+          >
+            Export all as CSV
+          </button>
+        )}
+
+        {loading && <MatchesSkeleton />}
+
+        {!loading && error && (
+          <div className="text-center py-16 space-y-3">
+            <p className="text-red-400 text-sm">{error}</p>
+            <button
+              onClick={fetchMatches}
+              className="text-sm text-white/40 hover:text-white/60 underline transition"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && matches.length === 0 && (
+          <div className="text-center py-16 space-y-2">
+            <p className="text-4xl">🎯</p>
+            <p className="text-white font-bold">No matches yet</p>
+            <p className="text-white/40 text-sm">Head back to the room and shoot your shot.</p>
+            <button
+              onClick={() => navigate(`/room/${eventId}`)}
+              className="mt-4 bg-yellow-400 text-black font-bold px-6 py-2.5 rounded-xl text-sm"
+            >
+              Back to room
+            </button>
+          </div>
+        )}
+
+        {/* Single column on mobile, 2-col on md, 3-col on lg */}
+        {!loading && !error && matches.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {matches.map(match => (
+              <MatchCard key={match.id} match={match} myCardId={myCardId} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
