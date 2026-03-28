@@ -27,6 +27,9 @@ export function useRoom(eventId) {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'vibe_cards', filter: `event_id=eq.${eventId}` },
         ({ new: card }) => setCards(prev => prev.map(c => c.id === card.id ? card : c)))
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'vibe_cards', filter: `event_id=eq.${eventId}` },
+        ({ old: card }) => setCards(prev => prev.filter(c => c.id !== card.id)))
       .subscribe(status => {
         const isConnected = status === 'SUBSCRIBED'
         setConnected(isConnected)
