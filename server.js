@@ -107,6 +107,13 @@ app.post('/icebreaker', icebreakerLimiter, async (req, res) => {
     res.end()
   }, 10_000)
 
+  // If the client navigates away mid-stream, abort immediately instead of
+  // streaming until the 10s timeout fires and wasting a Gemini request
+  req.on('close', () => {
+    controller.abort()
+    clearTimeout(timer)
+  })
+
   try {
     const stream = await ai.models.generateContentStream({
       model: 'gemini-2.0-flash',
@@ -129,8 +136,13 @@ app.post('/icebreaker', icebreakerLimiter, async (req, res) => {
       res.write('data: [DONE]\n\n')
     }
   } catch (err) {
-    // Fix #8: log the actual error — silent swallow made prod failures invisible
-    console.error('[icebreaker] Gemini error:', err?.message ?? err)
+    const msg = err?.message ?? String(err)
+    // Distinguish quota exhaustion from other failures for easier debugging
+    if (err?.status === 429 || msg.toLowerCase().includes('quota')) {
+      console.error('[icebreaker] Gemini quota exhausted:', msg)
+    } else {
+      console.error('[icebreaker] Gemini error:', msg)
+    }
     if (!controller.signal.aborted) {
       res.write('data: [ERROR]\n\n')
     }
