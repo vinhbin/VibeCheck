@@ -88,12 +88,13 @@ app.post('/icebreaker', async (req, res) => {
       const text = chunk.text
       if (text) res.write(`data: ${JSON.stringify(text)}\n\n`)
     }
-    res.write('data: [DONE]\n\n')
-  } catch {
-    res.write('data: [ERROR]\n\n')
+    if (!res.writableEnded) res.write('data: [DONE]\n\n')
+  } catch (err) {
+    console.error('[icebreaker error]', err?.message ?? err)
+    if (!res.writableEnded) res.write('data: [ERROR]\n\n')
   } finally {
     clearTimeout(timer)
-    res.end()
+    if (!res.writableEnded) res.end()
   }
 })
 
@@ -110,11 +111,12 @@ app.post('/embed', async (req, res) => {
 
   try {
     const result = await ai.models.embedContent({
-      model: 'gemini-embedding-exp-03-07',
+      model: 'gemini-embedding-001',
       contents: String(text).slice(0, 2000),
     })
     res.json({ embedding: result.embeddings[0].values })
-  } catch {
+  } catch (err) {
+    console.error('[embed error]', err?.message ?? err)
     res.status(500).json({ error: 'Embedding failed' })
   } finally {
     clearTimeout(timer)

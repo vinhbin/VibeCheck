@@ -41,8 +41,13 @@ CREATE TABLE matches (
   icebreaker     TEXT,
   status         match_status DEFAULT 'pending',
   created_at     TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT unique_match  UNIQUE (LEAST(card_a::text, card_b::text), GREATEST(card_a::text, card_b::text)),
-  CONSTRAINT no_self_match CHECK  (card_a <> card_b)
+  CONSTRAINT no_self_match CHECK (card_a <> card_b)
+);
+
+-- Expression-based uniqueness requires an index, not an inline constraint
+CREATE UNIQUE INDEX unique_match ON matches (
+  LEAST(card_a::text, card_b::text),
+  GREATEST(card_a::text, card_b::text)
 );
 
 CREATE TABLE failed_embeds (
