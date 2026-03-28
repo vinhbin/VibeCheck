@@ -5,38 +5,6 @@ import { safeStore, safeGet } from '../lib/storage'
 import { embedCard } from '../api/embed'
 import { VibeCardForm } from '../components/VibeCardForm'
 
-function generatePin() {
-  return String(Math.floor(1000 + Math.random() * 9000))
-}
-
-// ---------------------------------------------------------------------------
-// PIN reveal modal — shown once after card creation
-// ---------------------------------------------------------------------------
-function PinModal({ pin, onDone }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-xs rounded-2xl border border-white/10 bg-zinc-900 p-6 space-y-4 text-center shadow-2xl">
-        <p className="text-3xl">🔐</p>
-        <h2 className="text-white font-bold text-lg">Your card PIN</h2>
-        <p className="text-white/50 text-sm">
-          Save this — you'll need it to edit your card later.
-        </p>
-        <div className="rounded-xl bg-white/5 border border-white/10 py-4">
-          <span className="text-4xl font-black tracking-[0.3em] text-yellow-400">
-            {pin}
-          </span>
-        </div>
-        <button
-          onClick={onDone}
-          className="w-full rounded-xl bg-yellow-400 py-2.5 text-sm font-bold text-black hover:opacity-90"
-        >
-          Got it, let's go →
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------------------
 // PIN gate — shown in edit mode before the form
 // ---------------------------------------------------------------------------
@@ -88,13 +56,13 @@ export default function CreateCard() {
   const location     = useLocation()
   const navigate     = useNavigate()
   const isEditMode   = location.pathname.endsWith('/edit')
+  const roomCode     = location.state?.roomCode ?? null
 
   const [submitting, setSubmitting]     = useState(false)
   const [error, setError]               = useState(null)
   const [existingCard, setExistingCard] = useState(null)
   const [loading, setLoading]           = useState(isEditMode)
   const [pinVerified, setPinVerified]   = useState(false)
-  const [revealPin, setRevealPin]       = useState(null) // set after create to show modal
 
   // In edit mode, fetch the existing card once
   useEffect(() => {
@@ -118,11 +86,10 @@ export default function CreateCard() {
   async function handleCreate(formData) {
     if (submitting) return
     setSubmitting(true)
-    const pin = generatePin()
     try {
       const { data: card, error: err } = await supabase
         .from('vibe_cards')
-        .insert({ event_id: eventId, pin, ...formData })
+        .insert({ event_id: eventId, ...formData })
         .select()
         .single()
 
@@ -131,8 +98,8 @@ export default function CreateCard() {
       safeStore('my_card_id', card.id)
       safeStore('my_event_id', eventId)
 
-      setRevealPin(pin) // show PIN modal before navigating
-      embedCard(card)   // fire-and-forget
+      navigate(`/room/${eventId}`)
+      embedCard(card) // fire-and-forget
     } catch (err) {
       setSubmitting(false)
       const msg = err?.message ?? ''
@@ -171,11 +138,6 @@ export default function CreateCard() {
   // ---------------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-zinc-950 flex items-start justify-center px-4 py-12">
-      {/* PIN reveal modal */}
-      {revealPin && (
-        <PinModal pin={revealPin} onDone={() => navigate(`/room/${eventId}`)} />
-      )}
-
       <div className="w-full max-w-md space-y-6">
 
         {/* Header */}
@@ -189,6 +151,17 @@ export default function CreateCard() {
               : "Tell people what you're building and what you need."}
           </p>
         </div>
+
+        {/* Room code banner — shown to the creator */}
+        {roomCode && (
+          <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-yellow-400/70 font-semibold uppercase tracking-widest">Room code</p>
+              <p className="text-2xl font-black tracking-widest text-yellow-400">{roomCode}</p>
+            </div>
+            <p className="text-xs text-white/40 text-right">Share this so<br/>others can join</p>
+          </div>
+        )}
 
         {/* Error banner */}
         {error && (

@@ -38,6 +38,7 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
   const [form, setForm] = useState({
     name:    initial.name    ?? '',
     emoji:   initial.emoji   ?? '🚀',
+    pin:     initial.pin     ?? '',
     project: initial.project ?? '',
     need:    initial.need    ?? '',
     offer:   initial.offer   ?? '',
@@ -53,8 +54,9 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
 
   function validate() {
     const e = {}
-    if (!form.name.trim())    e.name    = 'Name is required'
-    if (!form.project.trim()) e.project = 'What are you building?'
+    if (!form.name.trim())          e.name    = 'Name is required'
+    if (!/^\d{4}$/.test(form.pin)) e.pin     = 'Must be exactly 4 digits'
+    if (!form.project.trim())       e.project = 'What are you building?'
     if (form.need.trim().length < 10)            e.need    = `${10 - form.need.trim().length} more chars needed`
     if (form.offer.trim().length < 10)           e.offer   = `${10 - form.offer.trim().length} more chars needed`
     return e
@@ -67,6 +69,7 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
     onSubmit({
       name:    form.name.trim(),
       emoji:   form.emoji,
+      pin:     form.pin,
       project: form.project.trim(),
       need:    form.need.trim(),
       offer:   form.offer.trim(),
@@ -133,6 +136,23 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
           />
         </Field>
       </div>
+
+      {/* PIN */}
+      <Field
+        label="Choose a PIN — 4 digits"
+        error={errors.pin}
+        hint="You'll need this to edit your card later"
+      >
+        <input
+          className={inputCls(!!errors.pin)}
+          type="password"
+          inputMode="numeric"
+          placeholder="••••"
+          maxLength={4}
+          value={form.pin}
+          onChange={e => set('pin', e.target.value.replace(/\D/g, '').slice(0, 4))}
+        />
+      </Field>
 
       {/* Project */}
       <Field label="What are you building?" error={errors.project}>

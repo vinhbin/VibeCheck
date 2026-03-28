@@ -129,7 +129,7 @@ export default function Home() {
     setBusy(true)
     try {
       const event = await createEvent(eventName.trim())
-      navigate(`/create/${event.id}`)
+      navigate(`/create/${event.id}`, { state: { roomCode: event.code } })
     } catch {
       setError('Failed to create room. Try again.')
       setBusy(false)
