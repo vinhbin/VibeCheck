@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import Landing from './pages/Landing'
 import Home from './pages/Home'
 import CreateCard from './pages/CreateCard'
 import Room from './pages/Room'
@@ -10,7 +11,8 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="/enter" element={<Home />} />
           <Route path="/join/:code" element={<Home />} />
           <Route path="/create/:eventId" element={<CreateCard />} />
           <Route path="/room/:eventId" element={<Room />} />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { safeStore, safeGet } from '../lib/storage'
 
@@ -89,8 +89,9 @@ const inputCls = 'w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.
 // ---------------------------------------------------------------------------
 export default function Home() {
   const { code: urlCode } = useParams()
+  const [searchParams]    = useSearchParams()
   const navigate          = useNavigate()
-  const [tab, setTab]     = useState('join')
+  const [tab, setTab]     = useState(searchParams.get('tab') || 'join')
   const [error, setError] = useState(null)
   const [busy, setBusy]   = useState(false)
 
