@@ -130,25 +130,13 @@ app.post('/icebreaker', icebreakerLimiter, async (req, res) => {
       const text = chunk.text
       if (text) res.write(`data: ${JSON.stringify(text)}\n\n`)
     }
-
-    // Fix #5: only write [DONE] if the timeout hasn't already ended the response
-    if (!controller.signal.aborted) {
-      res.write('data: [DONE]\n\n')
-    }
+    if (!res.writableEnded) res.write('data: [DONE]\n\n')
   } catch (err) {
-    const msg = err?.message ?? String(err)
-    // Distinguish quota exhaustion from other failures for easier debugging
-    if (err?.status === 429 || msg.toLowerCase().includes('quota')) {
-      console.error('[icebreaker] Gemini quota exhausted:', msg)
-    } else {
-      console.error('[icebreaker] Gemini error:', msg)
-    }
-    if (!controller.signal.aborted) {
-      res.write('data: [ERROR]\n\n')
-    }
+    console.error('[icebreaker error]', err?.message ?? err)
+    if (!res.writableEnded) res.write('data: [ERROR]\n\n')
   } finally {
     clearTimeout(timer)
-    res.end()
+    if (!res.writableEnded) res.end()
   }
 })
 
@@ -171,15 +159,13 @@ app.post('/embed', embedLimiter, async (req, res) => {
 
   try {
     const result = await ai.models.embedContent({
-      model: 'gemini-embedding-exp-03-07',
+      model: 'gemini-embedding-001',
       contents: String(text).slice(0, 2000),
     })
-    if (!timedOut && !res.headersSent) {
-      res.json({ embedding: result.embeddings[0].values })
-    }
+    res.json({ embedding: result.embeddings[0].values })
   } catch (err) {
-    console.error('[embed] Gemini error:', err?.message ?? err)
-    if (!res.headersSent) res.status(500).json({ error: 'Embedding failed' })
+    console.error('[embed error]', err?.message ?? err)
+    res.status(500).json({ error: 'Embedding failed' })
   } finally {
     clearTimeout(timer)
   }
