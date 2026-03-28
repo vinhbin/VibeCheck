@@ -2,13 +2,25 @@
  * VibeCheck — Express proxy
  * Keeps GEMINI_API_KEY server-side. Exposes /icebreaker (SSE) and /embed.
  *
- * Run: npm run proxy
+ * Run:     npm run proxy
+ * Dev:     npm run proxy:dev
  */
 
 import express from 'express'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import { GoogleGenAI } from '@google/genai'
+
+// ---------------------------------------------------------------------------
+// Startup validation — fail fast if required env vars are missing
+// ---------------------------------------------------------------------------
+
+const REQUIRED_ENV = ['GEMINI_API_KEY']
+const missing = REQUIRED_ENV.filter(k => !process.env[k])
+if (missing.length) {
+  console.error(`[startup] Missing required env vars: ${missing.join(', ')}`)
+  process.exit(1)
+}
 
 const app  = express()
 const PORT = process.env.PORT ?? 3001
@@ -18,9 +30,26 @@ const ai   = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 // Middleware
 // ---------------------------------------------------------------------------
 
-app.use(cors({ origin: process.env.ALLOWED_ORIGIN ?? 'http://localhost:5173' }))
+// Fix #7: must be set before rate limiter so Railway's reverse proxy forwards
+// the real client IP via X-Forwarded-For instead of the internal proxy IP
+app.set('trust proxy', 1)
+
+const rawOrigins = (process.env.ALLOWED_ORIGIN ?? 'http://localhost:5174').split(',').map(s => s.trim())
+app.use(cors({ origin: rawOrigins }))
 app.use(express.json({ limit: '16kb' }))
-app.use(rateLimit({ windowMs: 60_000, max: 10 }))
+
+// Fix #3: per-route rate limiters with realistic hackathon ceilings
+// Global 10/min on shared WiFi would exhaust instantly for the whole room
+const icebreakerLimiter = rateLimit({ windowMs: 60_000, max: 60,  standardHeaders: true, legacyHeaders: false })
+const embedLimiter      = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false })
+
+// ---------------------------------------------------------------------------
+// Health check
+// ---------------------------------------------------------------------------
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() })
+})
 
 // ---------------------------------------------------------------------------
 // AI personalities
@@ -34,14 +63,18 @@ const PERSONALITIES = {
   default:     'You are a witty icebreaker generator for hackathon networking events. Be specific, human, and a little playful. Never be corporate.',
 }
 
-const OUTPUT_RULE = " Write exactly 2 short sentences. Reference both people's actual projects. Max 150 tokens."
+const VALID_PERSONALITIES = new Set(Object.keys(PERSONALITIES))
+const OUTPUT_RULE = ' Write exactly 2 short sentences. Reference both people\'s actual projects. Max 150 tokens.'
 
-function getSystemInstruction(personality = 'default') {
-  return (PERSONALITIES[personality] ?? PERSONALITIES.default) + OUTPUT_RULE
+function getSystemInstruction(personality) {
+  // Fix #6: whitelist personality — reject anything not in the known set
+  const safe = VALID_PERSONALITIES.has(personality) ? personality : 'default'
+  return PERSONALITIES[safe] + OUTPUT_RULE
 }
 
-// Truncate + strip control chars (preserve emoji) — prevents prompt injection
-const trunc = (s = '', n = 200) => String(s).slice(0, n).replace(/[\x00-\x1F\x7F]/g, '')
+// Fix #4: coerce undefined/null to '' before String() so fields never become
+// the literal string "undefined" in the Gemini prompt
+const trunc = (s, n = 200) => String(s ?? '').slice(0, n).replace(/[\x00-\x1F\x7F]/g, '')
 
 function buildPrompt(cardA, cardB) {
   return (
@@ -55,10 +88,12 @@ function buildPrompt(cardA, cardB) {
 // POST /icebreaker — SSE streaming
 // ---------------------------------------------------------------------------
 
-app.post('/icebreaker', async (req, res) => {
+app.post('/icebreaker', icebreakerLimiter, async (req, res) => {
   const { cardA, cardB, personality } = req.body
-  if (!cardA?.name || !cardB?.name) {
-    return res.status(400).json({ error: 'Both cards required' })
+
+  // Fix #4: validate all fields used in the prompt, not just name
+  if (!cardA?.name || !cardB?.name || !cardA?.project || !cardB?.project) {
+    return res.status(400).json({ error: 'Both cards require name and project' })
   }
 
   res.setHeader('Content-Type', 'text/event-stream')
@@ -71,6 +106,13 @@ app.post('/icebreaker', async (req, res) => {
     res.write('data: [TIMEOUT]\n\n')
     res.end()
   }, 10_000)
+
+  // If the client navigates away mid-stream, abort immediately instead of
+  // streaming until the 10s timeout fires and wasting a Gemini request
+  req.on('close', () => {
+    controller.abort()
+    clearTimeout(timer)
+  })
 
   try {
     const stream = await ai.models.generateContentStream({
@@ -102,12 +144,18 @@ app.post('/icebreaker', async (req, res) => {
 // POST /embed
 // ---------------------------------------------------------------------------
 
-app.post('/embed', async (req, res) => {
+app.post('/embed', embedLimiter, async (req, res) => {
   const { text } = req.body
   if (!text) return res.status(400).json({ error: 'text required' })
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 10_000)
+  // Fix #1 & #2: embedContent has no AbortSignal support in the SDK — the old
+  // AbortController did nothing. Use a timedOut flag + res.headersSent guards
+  // so the timeout and the async result never both try to send a response.
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    if (!res.headersSent) res.status(504).json({ error: 'Embedding timed out' })
+  }, 10_000)
 
   try {
     const result = await ai.models.embedContent({
@@ -123,4 +171,8 @@ app.post('/embed', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => console.log(`Proxy running on :${PORT}`))
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
+
+app.listen(PORT, () => console.log(`[server] Proxy running on :${PORT}`))
