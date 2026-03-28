@@ -36,7 +36,7 @@ app.set('trust proxy', 1)
 
 const rawOrigins = (process.env.ALLOWED_ORIGIN ?? 'http://localhost:5174').split(',').map(s => s.trim())
 app.use(cors({ origin: rawOrigins }))
-app.use(express.json({ limit: '16kb' }))
+app.use(express.json({ limit: '256kb' }))
 
 // Fix #3: per-route rate limiters with realistic hackathon ceilings
 // Global 10/min on shared WiFi would exhaust instantly for the whole room
@@ -116,19 +116,22 @@ app.post('/icebreaker', icebreakerLimiter, async (req, res) => {
 
   try {
     const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       config: {
         systemInstruction: getSystemInstruction(personality),
-        maxOutputTokens: 150,
+        maxOutputTokens: 4096,
         temperature: 0.9,
+        thinkingConfig: { thinkingBudget: 128 },
       },
       contents: buildPrompt(cardA, cardB),
     })
 
     for await (const chunk of stream) {
       if (controller.signal.aborted) break
-      const text = chunk.text
-      if (text) res.write(`data: ${JSON.stringify(text)}\n\n`)
+      try {
+        const text = chunk.text
+        if (text) res.write(`data: ${JSON.stringify(text)}\n\n`)
+      } catch { /* skip thinking/non-text chunks */ }
     }
     if (!res.writableEnded) res.write('data: [DONE]\n\n')
   } catch (err) {
@@ -158,14 +161,17 @@ app.post('/embed', embedLimiter, async (req, res) => {
   }, 10_000)
 
   try {
+    console.log('[embed] requesting embedding for:', String(text).slice(0, 50))
     const result = await ai.models.embedContent({
       model: 'gemini-embedding-001',
       contents: String(text).slice(0, 2000),
+      config: { outputDimensionality: 768 },
     })
-    res.json({ embedding: result.embeddings[0].values })
+    console.log('[embed] success, dimensions:', result.embeddings?.[0]?.values?.length)
+    if (!res.headersSent) res.json({ embedding: result.embeddings[0].values })
   } catch (err) {
-    console.error('[embed error]', err?.message ?? err)
-    res.status(500).json({ error: 'Embedding failed' })
+    console.error('[embed error]', err)
+    if (!res.headersSent) res.status(500).json({ error: 'Embedding failed' })
   } finally {
     clearTimeout(timer)
   }
