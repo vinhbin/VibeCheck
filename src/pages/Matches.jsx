@@ -183,6 +183,14 @@ export default function Matches() {
       ))
     }
 
+    // New matches appear in real-time without refresh
+    const handleInsert = ({ new: inserted }) => {
+      setMatches(prev => {
+        if (prev.some(m => m.id === inserted.id)) return prev
+        return [inserted, ...prev]
+      })
+    }
+
     const channel = supabase
       .channel(`matches-page-${myCardId}`)
       .on('postgres_changes',
@@ -192,6 +200,14 @@ export default function Matches() {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'matches', filter: `card_b=eq.${myCardId}` },
         handleUpdate
+      )
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'matches', filter: `card_a=eq.${myCardId}` },
+        handleInsert
+      )
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'matches', filter: `card_b=eq.${myCardId}` },
+        handleInsert
       )
       .subscribe()
 

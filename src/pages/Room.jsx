@@ -19,17 +19,19 @@ export default function Room() {
 
   const { cards, loading, connected } = useRoom(eventId)
 
-  const [activeMatch, setActiveMatch] = useState(null)
+  const [matchQueue,  setMatchQueue]  = useState([])
   const [targetCard,  setTargetCard]  = useState(null)
   const [toast,       setToast]       = useState(null)
   const [showQR,      setShowQR]      = useState(false)
   const [minEnergy,   setMinEnergy]   = useState(1)
 
+  const activeMatch = matchQueue[0] ?? null
+
   const myCard = cards.find(c => c.id === myCardId) ?? null
 
-  // Incoming match notifications
+  // Incoming match notifications — queue so multiple don't overwrite each other
   useMatches(myCardId, (match) => {
-    setActiveMatch(match)
+    setMatchQueue(prev => [...prev, match])
     const senderName = match.card_a_snapshot?.name ?? match.card_b_snapshot?.name ?? 'Someone'
     showToast(`${senderName} wants to connect! 🎯`)
   })
@@ -215,7 +217,7 @@ export default function Room() {
       {activeMatch && (
         <MatchModal
           match={activeMatch}
-          onClose={() => setActiveMatch(null)}
+          onClose={() => setMatchQueue(prev => prev.slice(1))}
         />
       )}
     </div>
