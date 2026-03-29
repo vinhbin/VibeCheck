@@ -196,7 +196,6 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
-                      capture="user"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
