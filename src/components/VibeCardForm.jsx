@@ -43,6 +43,7 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
     need:    initial.need    ?? '',
     offer:   initial.offer   ?? '',
     energy:  initial.energy  ?? 5,
+    linkedin: initial.linkedin ?? '',
   })
   const [errors, setErrors]           = useState({})
   const [emojiOpen, setEmojiOpen]     = useState(false)
@@ -74,6 +75,7 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
       need:    form.need.trim(),
       offer:   form.offer.trim(),
       energy:  form.energy,
+      linkedin: form.linkedin.trim() || null,
     })
   }
 
@@ -221,6 +223,20 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
           <span>HYPE ⚡</span>
         </div>
       </div>
+
+      {/* LinkedIn */}
+      <Field
+        label="LinkedIn (optional)"
+        hint="So your matches can connect with you"
+      >
+        <input
+          className={inputCls(false)}
+          placeholder="https://linkedin.com/in/yourname"
+          maxLength={200}
+          value={form.linkedin}
+          onChange={e => set('linkedin', e.target.value)}
+        />
+      </Field>
 
       {/* Submit */}
       <button
