@@ -39,6 +39,20 @@ export function ShootYourShot({ myCard, targetCard, onClose }) {
       const [lo, hi] = [myCard.id, targetCard.id].sort()
       const isLo = myCard.id === lo
 
+      // Check if a match already exists and is accepted — don't overwrite it
+      const { data: existing } = await supabase
+        .from('matches')
+        .select('id, status')
+        .eq('card_a', lo)
+        .eq('card_b', hi)
+        .maybeSingle()
+
+      if (existing?.status === 'accepted') {
+        // Already matched — no need to send again
+        setDone(true)
+        return
+      }
+
       await supabase.from('matches').upsert(
         {
           card_a: lo,
