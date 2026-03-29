@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { safeGet } from '../lib/storage'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
+import { Avatar } from '../components/Avatar'
 
 // Fix #5: anchor must be in the DOM for Firefox to trigger the download
 function triggerDownload(filename, content, type) {
@@ -66,7 +67,7 @@ function MatchCard({ match, myCardId }) {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="text-4xl">{theirCard?.emoji}</div>
+          <Avatar photoUrl={theirCard?.photo_url} emoji={theirCard?.emoji} size="lg" />
           <div>
             <div className="flex items-center gap-1.5">
               <h3 className="font-bold text-lg">{theirCard?.name}</h3>

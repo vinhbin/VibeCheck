@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { safeGet } from '../lib/storage'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
+import { Avatar } from './Avatar'
 
 export function MatchModal({ match, onClose }) {
   const [displayed, setDisplayed] = useState('')
@@ -46,8 +47,8 @@ export function MatchModal({ match, onClose }) {
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="text-center">
-            <div className="text-6xl mb-4">{theirCard?.emoji}</div>
+          <div className="text-center flex flex-col items-center">
+            <Avatar photoUrl={theirCard?.photo_url} emoji={theirCard?.emoji} size="xl" className="mb-4" />
             <p className="text-xl font-bold mb-2">{theirCard?.name}</p>
             <p className="text-sm text-muted-foreground">{theirCard?.project}</p>
           </div>

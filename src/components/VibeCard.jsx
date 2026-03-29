@@ -1,6 +1,7 @@
 import { Sparkles } from 'lucide-react'
 import { safeGet } from '../lib/storage'
 import { Button } from './ui/button'
+import { Avatar } from './Avatar'
 
 // Map energy (1-10) to a suit + accent colour
 function getSuit(energy = 5) {
@@ -32,7 +33,7 @@ export function VibeCard({ card, compact = false, onShoot }) {
 
       {/* Card body */}
       <div className="flex flex-col items-center text-center px-6 pt-10 pb-4 gap-2 flex-1">
-        <span className="text-5xl leading-none">{card.emoji}</span>
+        <Avatar photoUrl={card.photo_url} emoji={card.emoji} size="xl" />
 
         <p
           className="text-2xl uppercase leading-none tracking-wide text-white"

@@ -13,8 +13,8 @@ export function SuggestedFeed({ suggestionIds, allCards, onShoot }) {
       </h3>
       <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4">
         {suggested.map(card => (
-          <div key={card.id} className="flex-shrink-0 w-64">
-            <VibeCard card={card} compact onShoot={onShoot} />
+          <div key={card.id} className="flex-shrink-0 w-72">
+            <VibeCard card={card} onShoot={onShoot} />
           </div>
         ))}
       </div>

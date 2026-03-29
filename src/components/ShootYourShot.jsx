@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { streamIcebreaker } from '../api/gemini'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 import { Button } from './ui/button'
+import { Avatar } from './Avatar'
 
 const MODES = [
   { key: 'default',     label: 'Default',     icon: Sparkles },
@@ -92,7 +93,7 @@ export function ShootYourShot({ myCard, targetCard, onClose }) {
           {/* Target Card Preview */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
             <div className="flex items-center gap-3 mb-2">
-              <div className="text-3xl">{targetCard.emoji}</div>
+              <Avatar photoUrl={targetCard.photo_url} emoji={targetCard.emoji} size="md" />
               <div>
                 <p className="font-bold">{targetCard.name}</p>
                 <p className="text-sm text-muted-foreground">{targetCard.project}</p>

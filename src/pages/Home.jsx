@@ -17,12 +17,15 @@ function generateRoomCode() {
   return Math.random().toString(36).padEnd(9, '0').slice(2, 8).toUpperCase()
 }
 
-export async function createEvent(name) {
+export async function createEvent(name, { discord_url, organizer_linkedin } = {}) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const code = generateRoomCode()
+    const row = { name, code }
+    if (discord_url) row.discord_url = discord_url
+    if (organizer_linkedin) row.organizer_linkedin = organizer_linkedin
     const { data, error } = await supabase
       .from('events')
-      .insert({ name, code })
+      .insert(row)
       .select()
       .single()
     if (!error) return data
@@ -100,7 +103,9 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState(urlCode ?? '')
 
   // Create state
-  const [eventName, setEventName] = useState('')
+  const [eventName, setEventName]       = useState('')
+  const [discordUrl, setDiscordUrl]     = useState('')
+  const [orgLinkedin, setOrgLinkedin]   = useState('')
 
   // Reclaim state
   const [reclaimCode, setReclaimCode] = useState('')
@@ -130,7 +135,10 @@ export default function Home() {
     clearError()
     setBusy(true)
     try {
-      const event = await createEvent(eventName.trim())
+      const event = await createEvent(eventName.trim(), {
+        discord_url: discordUrl.trim() || undefined,
+        organizer_linkedin: orgLinkedin.trim() || undefined,
+      })
       toast.success(`Room ${event.code} created!`)
       navigate(`/create/${event.id}`, { state: { roomCode: event.code } })
     } catch {
@@ -242,6 +250,28 @@ export default function Home() {
                     maxLength={80}
                     className="mt-2 bg-white/5 border-white/10 rounded-2xl"
                     autoFocus
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="discordUrl">Discord Invite (optional)</Label>
+                  <Input
+                    id="discordUrl"
+                    placeholder="https://discord.gg/your-invite"
+                    value={discordUrl}
+                    onChange={(e) => setDiscordUrl(e.target.value)}
+                    maxLength={200}
+                    className="mt-2 bg-white/5 border-white/10 rounded-2xl"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="orgLinkedin">Organizer LinkedIn (optional)</Label>
+                  <Input
+                    id="orgLinkedin"
+                    placeholder="https://linkedin.com/in/organizer"
+                    value={orgLinkedin}
+                    onChange={(e) => setOrgLinkedin(e.target.value)}
+                    maxLength={200}
+                    className="mt-2 bg-white/5 border-white/10 rounded-2xl"
                   />
                 </div>
                 <Button
