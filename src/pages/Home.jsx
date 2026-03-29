@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Zap, ArrowLeft } from 'lucide-react'
+import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { safeStore, safeGet } from '../lib/storage'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 
 // ---------------------------------------------------------------------------
 // Helpers (exported so CreateCard can reuse joinEvent)
@@ -37,7 +43,6 @@ export async function joinEvent(rawCode, setError, navigate) {
   if (!event) return setError('Room not found.')
   if (new Date(event.expires_at) < new Date()) return setError('This event has ended.')
 
-  // If user already has a card for this room, send them straight there
   const storedEventId = safeGet('my_event_id')
   const storedCardId  = safeGet('my_card_id')
   if (storedEventId === event.id && storedCardId) {
@@ -80,20 +85,16 @@ async function reclaimCard(code, pin, setError, navigate) {
 }
 
 // ---------------------------------------------------------------------------
-// Shared input style
-// ---------------------------------------------------------------------------
-const inputCls = 'w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/20 outline-none focus:border-white/30 focus:bg-white/10 transition-colors'
-
-// ---------------------------------------------------------------------------
 // Home page
 // ---------------------------------------------------------------------------
 export default function Home() {
   const { code: urlCode } = useParams()
   const [searchParams]    = useSearchParams()
   const navigate          = useNavigate()
-  const [tab, setTab]     = useState(searchParams.get('tab') || 'join')
   const [error, setError] = useState(null)
   const [busy, setBusy]   = useState(false)
+
+  const defaultTab = searchParams.get('tab') || 'join'
 
   // Join state
   const [joinCode, setJoinCode] = useState(urlCode ?? '')
@@ -116,7 +117,7 @@ export default function Home() {
 
   async function handleJoin(e) {
     e.preventDefault()
-    if (!joinCode.trim()) return setError('Enter a room code.')
+    if (!joinCode.trim()) { setError('Enter a room code.'); return }
     clearError()
     setBusy(true)
     await joinEvent(joinCode, setError, navigate)
@@ -125,11 +126,12 @@ export default function Home() {
 
   async function handleCreate(e) {
     e.preventDefault()
-    if (!eventName.trim()) return setError('Give your event a name.')
+    if (!eventName.trim()) { setError('Give your event a name.'); return }
     clearError()
     setBusy(true)
     try {
       const event = await createEvent(eventName.trim())
+      toast.success(`Room ${event.code} created!`)
       navigate(`/create/${event.id}`, { state: { roomCode: event.code } })
     } catch {
       setError('Failed to create room. Try again.')
@@ -139,136 +141,159 @@ export default function Home() {
 
   async function handleReclaim(e) {
     e.preventDefault()
-    if (!reclaimCode.trim() || !reclaimPin.trim()) return setError('Fill in both fields.')
+    if (!reclaimCode.trim() || !reclaimPin.trim()) { setError('Fill in both fields.'); return }
     clearError()
     setBusy(true)
     await reclaimCard(reclaimCode, reclaimPin, setError, navigate)
     setBusy(false)
   }
 
-  const TABS = [
-    { id: 'join',    label: 'Join room' },
-    { id: 'create',  label: 'Create room' },
-    { id: 'reclaim', label: 'Reclaim card' },
-  ]
-
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-8">
-
-        {/* Logo */}
-        <div className="text-center space-y-1">
-          <h1 className="text-4xl font-black text-white tracking-tight">VibeCheck ⚡</h1>
-          <p className="text-sm text-white/40">Drop your card. Find your people.</p>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Header */}
+      <div className="border-b border-white/10 bg-background/80 backdrop-blur-xl">
+        <div className="container mx-auto px-4 h-16 flex items-center max-w-4xl">
+          <button onClick={() => navigate('/')} className="flex items-center gap-2 hover:text-primary transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-semibold">Back</span>
+          </button>
         </div>
+      </div>
 
-        {/* Card */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden backdrop-blur">
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center">
+                <Zap className="w-7 h-7 text-primary-foreground" fill="currentColor" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-black mb-2">Welcome to VibeCheck</h1>
+            <p className="text-muted-foreground">Join a room, create one, or reclaim your card</p>
+          </div>
 
-          {/* Tab bar */}
-          <div className="flex border-b border-white/10">
-            {TABS.map(t => (
-              <button
-                key={t.id}
-                onClick={() => { setTab(t.id); clearError() }}
-                className={[
-                  'flex-1 py-3 text-xs font-semibold uppercase tracking-widest transition-colors',
-                  tab === t.id
-                    ? 'text-yellow-400 border-b-2 border-yellow-400 -mb-px'
-                    : 'text-white/30 hover:text-white/60',
-                ].join(' ')}
+          {/* Error */}
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              {error}
+            </div>
+          )}
+
+          {/* Tabbed Card */}
+          <Tabs defaultValue={defaultTab} className="w-full" onValueChange={clearError}>
+            <TabsList className="grid w-full grid-cols-3 bg-white/5 border border-white/10 rounded-2xl p-1">
+              <TabsTrigger
+                value="join"
+                className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold"
               >
-                {t.label}
-              </button>
-            ))}
-          </div>
+                Join
+              </TabsTrigger>
+              <TabsTrigger
+                value="create"
+                className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold"
+              >
+                Create
+              </TabsTrigger>
+              <TabsTrigger
+                value="reclaim"
+                className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold"
+              >
+                Reclaim
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Forms */}
-          <div className="p-5 space-y-4">
-
-            {/* Error */}
-            {error && (
-              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            {/* JOIN */}
-            {tab === 'join' && (
-              <form onSubmit={handleJoin} className="space-y-3">
-                <input
-                  className={inputCls + ' uppercase tracking-widest'}
-                  placeholder="ROOM CODE"
-                  maxLength={6}
-                  value={joinCode}
-                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                  autoFocus
-                />
-                <button
+            {/* Join Tab */}
+            <TabsContent value="join" className="mt-6">
+              <form onSubmit={handleJoin} className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                <div>
+                  <Label htmlFor="joinCode">Room Code</Label>
+                  <Input
+                    id="joinCode"
+                    placeholder="ABC123"
+                    value={joinCode}
+                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); clearError() }}
+                    maxLength={6}
+                    className="mt-2 bg-white/5 border-white/10 rounded-2xl text-lg font-mono uppercase tracking-wider"
+                    autoFocus
+                  />
+                </div>
+                <Button
                   type="submit"
                   disabled={busy}
-                  className="w-full rounded-xl bg-yellow-400 py-2.5 text-sm font-bold text-black hover:opacity-90 disabled:opacity-50"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-2xl py-6"
                 >
-                  {busy ? 'Joining…' : 'Join Room →'}
-                </button>
+                  {busy ? 'Joining...' : 'Join Room'}
+                </Button>
               </form>
-            )}
+            </TabsContent>
 
-            {/* CREATE */}
-            {tab === 'create' && (
-              <form onSubmit={handleCreate} className="space-y-3">
-                <input
-                  className={inputCls}
-                  placeholder="Event name (e.g. HackMTL 2026)"
-                  maxLength={80}
-                  value={eventName}
-                  onChange={e => setEventName(e.target.value)}
-                  autoFocus
-                />
-                <button
+            {/* Create Tab */}
+            <TabsContent value="create" className="mt-6">
+              <form onSubmit={handleCreate} className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                <div>
+                  <Label htmlFor="eventName">Event Name</Label>
+                  <Input
+                    id="eventName"
+                    placeholder="HackMIT 2026"
+                    value={eventName}
+                    onChange={(e) => { setEventName(e.target.value); clearError() }}
+                    maxLength={80}
+                    className="mt-2 bg-white/5 border-white/10 rounded-2xl"
+                    autoFocus
+                  />
+                </div>
+                <Button
                   type="submit"
                   disabled={busy}
-                  className="w-full rounded-xl bg-yellow-400 py-2.5 text-sm font-bold text-black hover:opacity-90 disabled:opacity-50"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-2xl py-6"
                 >
-                  {busy ? 'Creating…' : 'Create Room →'}
-                </button>
+                  {busy ? 'Creating...' : 'Create Room'}
+                </Button>
               </form>
-            )}
+            </TabsContent>
 
-            {/* RECLAIM */}
-            {tab === 'reclaim' && (
-              <form onSubmit={handleReclaim} className="space-y-3">
-                <input
-                  className={inputCls + ' uppercase tracking-widest'}
-                  placeholder="ROOM CODE"
-                  maxLength={6}
-                  value={reclaimCode}
-                  onChange={e => setReclaimCode(e.target.value.toUpperCase())}
-                  autoFocus
-                />
-                <input
-                  className={inputCls + ' tracking-widest'}
-                  type="password"
-                  inputMode="numeric"
-                  placeholder="Your 4-digit PIN"
-                  maxLength={4}
-                  value={reclaimPin}
-                  onChange={e => setReclaimPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                />
-                <p className="text-xs text-white/25">
-                  Use this if you switched browsers or cleared your session.
-                </p>
-                <button
+            {/* Reclaim Tab */}
+            <TabsContent value="reclaim" className="mt-6">
+              <form onSubmit={handleReclaim} className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                <div>
+                  <Label htmlFor="reclaimCode">Room Code</Label>
+                  <Input
+                    id="reclaimCode"
+                    placeholder="ABC123"
+                    value={reclaimCode}
+                    onChange={(e) => { setReclaimCode(e.target.value.toUpperCase()); clearError() }}
+                    maxLength={6}
+                    className="mt-2 bg-white/5 border-white/10 rounded-2xl text-lg font-mono uppercase tracking-wider"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="reclaimPin">4-Digit PIN</Label>
+                  <Input
+                    id="reclaimPin"
+                    type="password"
+                    placeholder="****"
+                    value={reclaimPin}
+                    onChange={(e) => { setReclaimPin(e.target.value.replace(/\D/g, '').slice(0, 4)); clearError() }}
+                    maxLength={4}
+                    className="mt-2 bg-white/5 border-white/10 rounded-2xl text-lg font-mono tracking-wider"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Use this if you switched browsers or cleared your session.
+                  </p>
+                </div>
+                <Button
                   type="submit"
                   disabled={busy}
-                  className="w-full rounded-xl bg-yellow-400 py-2.5 text-sm font-bold text-black hover:opacity-90 disabled:opacity-50"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-2xl py-6"
                 >
-                  {busy ? 'Looking up…' : 'Reclaim My Card →'}
-                </button>
+                  {busy ? 'Looking up...' : 'Reclaim Card'}
+                </Button>
               </form>
-            )}
-
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

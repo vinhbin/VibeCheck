@@ -7,13 +7,13 @@ export class ErrorBoundary extends React.Component {
   render() {
     if (this.state.crashed) {
       return (
-        <div className="min-h-[100dvh] bg-black flex flex-col items-center justify-center text-white p-8">
+        <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center text-foreground p-8">
           <p className="text-5xl mb-4">💥</p>
           <h1 className="font-black text-2xl mb-2">Something exploded.</h1>
-          <p className="text-white/60 mb-6">The vibe got too strong. Try refreshing.</p>
+          <p className="text-muted-foreground mb-6">The vibe got too strong. Try refreshing.</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-yellow-400 text-black font-bold px-6 py-2 rounded-xl"
+            className="bg-primary text-primary-foreground font-bold px-6 py-2.5 rounded-xl hover:bg-primary/90 transition"
           >
             Refresh
           </button>

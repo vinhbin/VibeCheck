@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { Button } from './ui/button'
 
 export function RoomQR({ code }) {
   const joinUrl = `${window.location.origin}/join/${code}`
@@ -12,12 +13,23 @@ export function RoomQR({ code }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/5">
-      <QRCodeSVG value={joinUrl} size={128} bgColor="transparent" fgColor="#FACC15" />
-      <p className="text-yellow-400 font-black tracking-widest text-xl">{code}</p>
-      <button onClick={copy} className="text-sm text-white/60 hover:text-white transition">
-        {copied ? '✓ Copied!' : 'Copy join link'}
-      </button>
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+      <div className="bg-white p-8 rounded-2xl flex items-center justify-center">
+        <div className="text-center">
+          <QRCodeSVG value={joinUrl} size={192} bgColor="white" fgColor="black" />
+          <p className="mt-4 text-black font-mono text-2xl font-bold">{code}</p>
+        </div>
+      </div>
+      <p className="text-center text-sm text-muted-foreground">
+        Scan this QR code to join the room
+      </p>
+      <Button
+        onClick={copy}
+        variant="outline"
+        className="w-full rounded-2xl border-white/10 hover:border-primary hover:text-primary"
+      >
+        {copied ? 'Copied!' : 'Copy join link'}
+      </Button>
     </div>
   )
 }

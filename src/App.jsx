@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { Toaster } from './components/ui/sonner'
 import Landing from './pages/Landing'
 import Home from './pages/Home'
 import CreateCard from './pages/CreateCard'
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/matches/:eventId" element={<Matches />} />
         </Routes>
       </BrowserRouter>
+      <Toaster position="bottom-center" />
     </ErrorBoundary>
   )
 }

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { safeStore, safeGet } from '../lib/storage'
 import { embedCard } from '../api/embed'
 import { VibeCardForm } from '../components/VibeCardForm'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 
 // ---------------------------------------------------------------------------
 // PIN gate — shown in edit mode before the form
@@ -23,26 +26,26 @@ function PinGate({ card, onVerified }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-4 backdrop-blur text-center">
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4 backdrop-blur text-center">
       <p className="text-white font-semibold">Enter your PIN to edit your card</p>
       <form onSubmit={verify} className="space-y-3">
-        <input
+        <Input
           autoFocus
           type="password"
           inputMode="numeric"
           maxLength={4}
           value={pin}
           onChange={e => { setPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setError(null) }}
-          placeholder="••••"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-center text-white text-lg tracking-widest placeholder-white/20 outline-none focus:border-white/30 focus:bg-white/10 transition-colors"
+          placeholder="****"
+          className="bg-white/5 border-white/10 rounded-2xl text-center text-lg tracking-widest"
         />
         {error && <p className="text-xs text-red-400">{error}</p>}
-        <button
+        <Button
           type="submit"
-          className="w-full rounded-xl bg-yellow-400 py-2.5 text-sm font-bold text-black hover:opacity-90"
+          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-2xl py-6"
         >
           Unlock
-        </button>
+        </Button>
       </form>
     </div>
   )
@@ -133,19 +136,27 @@ export default function CreateCard() {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-start justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <div className="border-b border-white/10 bg-background/80 backdrop-blur-xl sticky top-0 z-10">
+        <div className="container mx-auto px-4 h-16 flex items-center max-w-6xl">
+          <button
+            onClick={() => navigate(isEditMode ? `/room/${eventId}` : '/enter')}
+            className="flex items-center gap-2 hover:text-primary transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-semibold">Back</span>
+          </button>
+        </div>
+      </div>
 
-        {/* Header */}
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-white">
-            {isEditMode ? 'Edit your card' : 'Drop your card'}
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-black mb-2">
+            {isEditMode ? 'Edit Your Card' : 'Create Your Card'}
           </h1>
-          <p className="text-sm text-white/40">
+          <p className="text-muted-foreground">
             {isEditMode
               ? 'Update your info — your matches will see the new version.'
               : "Tell people what you're building and what you need."}
@@ -154,26 +165,26 @@ export default function CreateCard() {
 
         {/* Room code banner — shown to the creator */}
         {roomCode && (
-          <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 px-4 py-3 flex items-center justify-between">
+          <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/10 px-6 py-4 flex items-center justify-between">
             <div>
-              <p className="text-xs text-yellow-400/70 font-semibold uppercase tracking-widest">Room code</p>
-              <p className="text-2xl font-black tracking-widest text-yellow-400">{roomCode}</p>
+              <p className="text-xs text-primary/70 font-semibold uppercase tracking-widest">Room code</p>
+              <p className="text-2xl font-black tracking-widest text-primary">{roomCode}</p>
             </div>
-            <p className="text-xs text-white/40 text-right">Share this so<br/>others can join</p>
+            <p className="text-xs text-muted-foreground text-right">Share this so<br/>others can join</p>
           </div>
         )}
 
         {/* Error banner */}
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
         )}
 
         {/* Body */}
         {isEditMode && loading && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-sm text-white/40">
-            Loading your card…
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center text-sm text-muted-foreground">
+            Loading your card...
           </div>
         )}
 

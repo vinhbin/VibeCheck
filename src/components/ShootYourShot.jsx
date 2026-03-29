@@ -1,13 +1,16 @@
 import { useState, useRef } from 'react'
+import { Share2, Sparkles, Flame, TrendingDown, Lightbulb, Briefcase } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { streamIcebreaker } from '../api/gemini'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { Button } from './ui/button'
 
 const MODES = [
-  { key: 'default',     label: '✨ Default' },
-  { key: 'hype',        label: '🔥 Hype' },
-  { key: 'roast',       label: '😤 Roast' },
-  { key: 'philosopher', label: '🧠 Philosopher' },
-  { key: 'investor',    label: '📈 Investor' },
+  { key: 'default',     label: 'Default',     icon: Sparkles },
+  { key: 'hype',        label: 'Hype',        icon: Flame },
+  { key: 'roast',       label: 'Roast',       icon: TrendingDown },
+  { key: 'philosopher', label: 'Philosopher',  icon: Lightbulb },
+  { key: 'investor',    label: 'Investor',     icon: Briefcase },
 ]
 
 export function ShootYourShot({ myCard, targetCard, onClose }) {
@@ -65,82 +68,91 @@ export function ShootYourShot({ myCard, targetCard, onClose }) {
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/85 flex items-end sm:items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-5"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Target card header */}
-        <div>
-          <p className="text-xs text-white/40 uppercase tracking-widest mb-1">Shoot your shot at</p>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{targetCard.emoji}</span>
-            <div>
-              <p className="font-black text-white text-lg leading-tight">{targetCard.name}</p>
-              <p className="text-white/50 text-xs">{targetCard.project}</p>
+    <Dialog open={true} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="bg-background border-white/10 rounded-2xl max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-black">Shoot Your Shot</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Target Card Preview */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="text-3xl">{targetCard.emoji}</div>
+              <div>
+                <p className="font-bold">{targetCard.name}</p>
+                <p className="text-sm text-muted-foreground">{targetCard.project}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Personality picker */}
-        <div>
-          <p className="text-xs text-white/40 uppercase tracking-widest mb-2">Vibe</p>
-          <div className="flex flex-wrap gap-2">
-            {MODES.map(m => (
-              <button
-                key={m.key}
-                id={`personality-${m.key}`}
-                onClick={() => switchPersonality(m.key)}
-                className={[
-                  'px-3 py-1 rounded-full text-xs font-bold transition',
-                  personality === m.key
-                    ? 'bg-yellow-400 text-black'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20',
-                ].join(' ')}
-              >
-                {m.label}
-              </button>
-            ))}
+          {/* Personality Picker */}
+          <div>
+            <p className="font-semibold mb-3">Pick your vibe:</p>
+            <div className="flex flex-wrap gap-2">
+              {MODES.map((m) => (
+                <Button
+                  key={m.key}
+                  type="button"
+                  onClick={() => switchPersonality(m.key)}
+                  variant={personality === m.key ? 'default' : 'outline'}
+                  size="sm"
+                  className={`rounded-full font-semibold ${
+                    personality === m.key
+                      ? 'bg-primary text-primary-foreground'
+                      : 'border-white/10'
+                  }`}
+                >
+                  <m.icon className="w-4 h-4 mr-2" />
+                  {m.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Icebreaker Preview */}
+          {(firing || icebreaker) && (
+            <div>
+              <p className="font-semibold mb-2">Your icebreaker:</p>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 min-h-[100px]">
+                <p className="text-sm">
+                  {icebreaker || <span className="text-muted-foreground">Generating icebreaker...</span>}
+                  {firing && <span className="inline-block w-2 h-4 bg-primary ml-1 animate-pulse" />}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              onClick={onClose}
+              variant="outline"
+              className="flex-1 rounded-2xl border-white/10"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={done ? onClose : shoot}
+              disabled={firing}
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl font-semibold"
+            >
+              {done ? (
+                'Sent!'
+              ) : firing ? (
+                'Generating...'
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Shoot
+                </>
+              )}
+            </Button>
           </div>
         </div>
-
-        {/* Icebreaker preview */}
-        {(firing || icebreaker) && (
-          <div className="bg-white/5 rounded-xl p-4 min-h-[64px]">
-            <p className="text-white leading-relaxed text-sm">
-              {icebreaker || <span className="text-white/30">Generating icebreaker…</span>}
-              {firing && <span className="inline-block w-1 h-4 bg-yellow-400 ml-1 animate-pulse align-middle" />}
-            </p>
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex gap-3">
-          <button
-            id="shoot-cancel"
-            onClick={onClose}
-            className="flex-1 border border-white/20 text-white/60 font-bold py-3 rounded-xl hover:border-white/40 transition text-sm"
-          >
-            Cancel
-          </button>
-          <button
-            id="shoot-fire"
-            onClick={done ? onClose : shoot}
-            disabled={firing}
-            className={[
-              'flex-1 font-bold py-3 rounded-xl text-sm transition',
-              firing
-                ? 'bg-yellow-400/50 text-black cursor-not-allowed'
-                : 'bg-yellow-400 text-black hover:bg-yellow-300',
-            ].join(' ')}
-          >
-            {done ? 'Sent! 🎯' : firing ? 'Generating…' : 'Shoot 🎯'}
-          </button>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

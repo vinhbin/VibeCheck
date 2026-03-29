@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { QrCode, Users, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { safeGet } from '../lib/storage'
 import { useRoom } from '../hooks/useRoom'
@@ -11,6 +12,7 @@ import { MatchModal } from '../components/MatchModal'
 import { ShootYourShot } from '../components/ShootYourShot'
 import { RoomQR } from '../components/RoomQR'
 import { EnergyFilter } from '../components/EnergyFilter'
+import { Button } from '../components/ui/button'
 
 export default function Room() {
   const { eventId } = useParams()
@@ -21,7 +23,7 @@ export default function Room() {
 
   const [matchQueue,  setMatchQueue]  = useState([])
   const [targetCard,  setTargetCard]  = useState(null)
-  const [toast,       setToast]       = useState(null)
+  const [toastMsg,    setToastMsg]    = useState(null)
   const [showQR,      setShowQR]      = useState(false)
   const [minEnergy,   setMinEnergy]   = useState(1)
 
@@ -29,22 +31,22 @@ export default function Room() {
 
   const myCard = cards.find(c => c.id === myCardId) ?? null
 
-  // Incoming match notifications — queue so multiple don't overwrite each other
+  // Incoming match notifications
   useMatches(myCardId, (match) => {
     setMatchQueue(prev => [...prev, match])
     const senderName = match.card_a_snapshot?.name ?? match.card_b_snapshot?.name ?? 'Someone'
-    showToast(`${senderName} wants to connect! 🎯`)
+    showToast(`${senderName} wants to connect!`)
   })
 
-  // AI-suggested cards (pgvector) — refreshes as embeddings come in
+  // AI-suggested cards (pgvector)
   const suggestionIds = useSuggested(myCard, eventId, cards.length)
 
-  // Filtered card list — always show own card at top regardless of energy
+  // Filtered card list
   const visibleCards = cards.filter(c => c.id === myCardId || c.energy >= minEnergy)
 
   function showToast(msg) {
-    setToast(msg)
-    setTimeout(() => setToast(null), 4000)
+    setToastMsg(msg)
+    setTimeout(() => setToastMsg(null), 4000)
   }
 
   async function handleDeleteCard() {
@@ -71,96 +73,93 @@ export default function Room() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-black text-white flex flex-col">
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-white/10 px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          {/* Logo / title */}
-          <div className="flex-1 min-w-0">
-            <p className="font-black text-yellow-400 text-lg leading-none tracking-tight">
-              VibeCheck{eventName ? ` — ${eventName}` : ''}
-            </p>
-            <p className="text-white/40 text-xs truncate">
-              {cards.length} {cards.length === 1 ? 'person' : 'people'} in the room
-            </p>
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-white/10 px-4 py-3">
+        <div className="container mx-auto max-w-6xl">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-yellow-400 animate-pulse'}`} />
+                <span className="text-sm text-muted-foreground">{connected ? 'Live' : 'Connecting...'}</span>
+              </div>
+              <div className="h-4 w-px bg-white/10" />
+              <h2 className="font-bold">
+                {eventName ? `${eventName}` : `Room`}
+                <span className="text-muted-foreground text-sm ml-2">
+                  {cards.length} {cards.length === 1 ? 'person' : 'people'}
+                </span>
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowQR(v => !v)}
+                className="rounded-xl border-white/10"
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl border-white/10 hover:border-primary hover:text-primary"
+                onClick={() => navigate(`/matches/${eventId}`)}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Matches
+              </Button>
+            </div>
           </div>
 
-          {/* Connection indicator */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span
-              className={[
-                'w-2 h-2 rounded-full transition-colors',
-                connected ? 'bg-green-400' : 'bg-yellow-400 animate-pulse',
-              ].join(' ')}
-            />
-            <span className="text-xs text-white/40">{connected ? 'Live' : 'Connecting…'}</span>
-          </div>
+          {/* My Card Bar */}
+          {myCard && (
+            <div className="bg-primary/10 border border-primary/30 rounded-2xl p-3">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">{myCard.emoji}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold truncate">{myCard.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{myCard.project}</p>
+                </div>
+                <div className="text-sm font-semibold text-primary">{myCard.energy}/10</div>
+                <button
+                  onClick={() => navigate(`/room/${eventId}/edit`)}
+                  className="text-xs text-muted-foreground hover:text-white transition font-medium"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDeleteCard}
+                  className="text-xs text-red-400 hover:text-red-300 transition font-medium"
+                >
+                  Leave
+                </button>
+              </div>
+            </div>
+          )}
 
-          {/* QR toggle */}
-          <button
-            id="qr-toggle"
-            onClick={() => setShowQR(v => !v)}
-            className="shrink-0 bg-white/10 hover:bg-white/20 transition rounded-xl px-3 py-1.5 text-xs font-bold"
-          >
-            {showQR ? 'Hide QR' : '📲 Share'}
-          </button>
-
-          {/* Matches link */}
-          <button
-            id="go-to-matches"
-            onClick={() => navigate(`/matches/${eventId}`)}
-            className="shrink-0 bg-yellow-400 hover:bg-yellow-300 transition text-black rounded-xl px-3 py-1.5 text-xs font-bold"
-          >
-            Matches
-          </button>
+          {/* QR panel */}
+          {showQR && eventCode && (
+            <div className="mt-3">
+              <RoomQR code={eventCode} />
+            </div>
+          )}
         </div>
-
-        {/* QR panel — slides open */}
-        {showQR && eventCode && (
-          <div className="max-w-lg mx-auto mt-3">
-            <RoomQR code={eventCode} />
-          </div>
-        )}
       </header>
 
-      {/* ── My card action bar (shown when card is loaded) ── */}
-      {myCard && (
-        <div className="bg-zinc-900/60 border-b border-white/5 px-4 py-2">
-          <div className="max-w-lg mx-auto flex items-center gap-3">
-            <span className="text-lg">{myCard.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">{myCard.name}</p>
-              <p className="text-xs text-white/40 truncate">{myCard.project}</p>
-            </div>
-            <button
-              id="edit-card"
-              onClick={() => navigate(`/room/${eventId}/edit`)}
-              className="text-xs text-white/40 hover:text-white transition font-medium"
-            >
-              Edit
-            </button>
-            <button
-              id="leave-room"
-              onClick={handleDeleteCard}
-              className="text-xs text-red-400 hover:text-red-300 transition font-medium"
-            >
-              Leave
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Main content ── */}
-      <main className="flex-1 overflow-y-auto px-4 py-5">
-        <div className="max-w-lg mx-auto space-y-5">
-          {/* Energy filter */}
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="container mx-auto max-w-6xl space-y-6">
+          {/* Energy Filter */}
           {!loading && cards.length > 1 && (
-            <div className="bg-white/5 rounded-2xl px-4 py-3">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
               <EnergyFilter value={minEnergy} onChange={setMinEnergy} />
             </div>
           )}
 
-          {/* Suggested rail (appears once embeddings are ready) */}
+          {/* Suggested rail */}
           {suggestionIds.length > 0 && (
             <SuggestedFeed
               suggestionIds={suggestionIds}
@@ -171,9 +170,10 @@ export default function Room() {
 
           {/* Section label */}
           {!loading && cards.length > 0 && (
-            <p className="text-xs text-white/30 uppercase tracking-widest">
-              {visibleCards.length === 0 ? 'No one matches your energy filter' : '🔥 In the room'}
-            </p>
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              {visibleCards.length === 0 ? 'No one matches your energy filter' : 'In the Room'}
+            </h3>
           )}
 
           {/* Card feed */}
@@ -187,24 +187,21 @@ export default function Room() {
           {!loading && cards.length === 0 && (
             <div className="text-center py-16 space-y-2">
               <p className="text-4xl">👀</p>
-              <p className="font-bold text-white/60">No cards yet</p>
-              <p className="text-white/30 text-sm">Be the first — share the QR above</p>
+              <p className="font-bold text-muted-foreground">No cards yet</p>
+              <p className="text-muted-foreground text-sm">Be the first — share the QR above</p>
             </div>
           )}
         </div>
       </main>
 
-      {/* ── Toast notification ── */}
-      {toast && (
-        <div
-          id="toast-notification"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-800 border border-white/20 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-xl z-40 animate-bounce-in whitespace-nowrap"
-        >
-          {toast}
+      {/* Toast notification */}
+      {toastMsg && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-secondary border border-white/20 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-xl z-40 animate-bounce whitespace-nowrap">
+          {toastMsg}
         </div>
       )}
 
-      {/* ── Shoot Your Shot modal ── */}
+      {/* Shoot Your Shot modal */}
       {targetCard && myCard && (
         <ShootYourShot
           myCard={myCard}
@@ -213,7 +210,7 @@ export default function Room() {
         />
       )}
 
-      {/* ── Incoming match modal ── */}
+      {/* Incoming match modal */}
       {activeMatch && (
         <MatchModal
           match={activeMatch}

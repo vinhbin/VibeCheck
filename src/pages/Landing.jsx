@@ -1,314 +1,254 @@
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useInView } from 'framer-motion'
+import {
+  Zap, Users, Sparkles, Target, MessageSquare,
+  TrendingUp, Brain, Flame, TrendingDown, Lightbulb, Briefcase,
+} from 'lucide-react'
+import { Button } from '../components/ui/button'
+import { Navbar } from '../components/Navbar'
 
-const FEATURES = [
-  { emoji: '🎴', title: 'Drop Your Card', desc: 'Share your name, project, what you need, and what you bring to the table. Your vibe card is your hackathon identity.' },
-  { emoji: '🤖', title: 'AI-Powered Matching', desc: 'Our semantic engine uses vector embeddings to find people whose offers match your needs — no more random intros.' },
-  { emoji: '🎯', title: 'Shoot Your Shot', desc: 'Pick a vibe — hype, roast, philosopher, or investor — and let AI craft a personalized icebreaker to kick things off.' },
-  { emoji: '⚡', title: 'Real-Time Room', desc: 'See everyone in the room live. Cards appear instantly as people join. Filter by energy level to find the most active builders.' },
-  { emoji: '🔗', title: 'Instant Connections', desc: 'Get notified the moment someone shoots their shot at you. Accept, connect, and export contacts as vCards.' },
-  { emoji: '📲', title: 'QR Code Sharing', desc: 'Share your room with a single scan. No app downloads, no sign-ups — just open the link and drop your card.' },
-]
+const fadeUpVariants = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0 },
+}
 
-const HOW_IT_WORKS = [
-  { step: '01', title: 'Create or join a room', desc: 'The organizer creates a room and shares the code or QR. Attendees join in seconds.' },
-  { step: '02', title: 'Fill out your vibe card', desc: 'Tell us your name, project, what you need help with, and what skills you offer.' },
-  { step: '03', title: 'Browse & get suggestions', desc: 'AI analyzes everyone\'s cards and surfaces your best matches based on complementary needs and offers.' },
-  { step: '04', title: 'Shoot your shot', desc: 'Tap someone\'s card, pick a personality, and send an AI-generated icebreaker. They\'ll get notified instantly.' },
-]
+function AnimatedSection({ children, delay = 0 }) {
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: '-100px' })
 
-const PERSONALITIES = [
-  { key: 'hype', emoji: '🔥', label: 'Hype', desc: 'Over-the-top excitement about your collab potential', color: 'from-orange-500/20 to-red-500/20 border-orange-500/30' },
-  { key: 'roast', emoji: '😤', label: 'Roast', desc: 'Playful teasing that makes you both laugh', color: 'from-pink-500/20 to-purple-500/20 border-pink-500/30' },
-  { key: 'philosopher', emoji: '🧠', label: 'Philosopher', desc: 'Deep, slightly absurd insights connecting your work', color: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30' },
-  { key: 'investor', emoji: '📈', label: 'Investor', desc: '90s infomercial energy pitching why you MUST meet', color: 'from-green-500/20 to-emerald-500/20 border-green-500/30' },
-]
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.5, delay: i * 0.1 } }),
+  return (
+    <motion.div
+      ref={ref}
+      initial="hidden"
+      animate={isInView ? 'visible' : 'hidden'}
+      variants={fadeUpVariants}
+      transition={{ duration: 0.6, delay }}
+    >
+      {children}
+    </motion.div>
+  )
 }
 
 export default function Landing() {
   const navigate = useNavigate()
+  const [glowPosition, setGlowPosition] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setGlowPosition({ x: e.clientX, y: e.clientY })
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <Navbar />
 
-      {/* ── Nav ── */}
-      <nav className="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-lg border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <p className="font-black text-lg tracking-tight">Vibe<span className="text-yellow-400">Check</span></p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate('/enter')}
-              className="text-xs font-bold text-white/60 hover:text-white px-4 py-2 rounded-xl transition"
-            >
-              Join Room
-            </button>
-            <button
-              onClick={() => navigate('/enter?tab=create')}
-              className="text-xs font-bold bg-yellow-400 text-black px-4 py-2 rounded-xl hover:bg-yellow-300 transition"
-            >
-              Create Room
-            </button>
-          </div>
-        </div>
-      </nav>
+      {/* Animated Glow Effect */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          background: `radial-gradient(600px circle at ${glowPosition.x}px ${glowPosition.y}px, rgba(250, 204, 21, 0.1), transparent 40%)`,
+        }}
+      />
 
-      {/* ── Hero ── */}
-      <section className="relative flex flex-col items-center justify-center min-h-screen px-4 pt-16">
-        {/* Animated glows */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-yellow-400/8 rounded-full blur-[160px] pointer-events-none" />
-        <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-1/4 right-1/4 w-[300px] h-[300px] bg-cyan-500/5 rounded-full blur-[100px] pointer-events-none" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="relative text-center space-y-6 max-w-2xl"
-        >
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center px-4 pt-16">
+        <div className="container mx-auto max-w-5xl text-center relative z-10">
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="inline-block bg-yellow-400/10 border border-yellow-400/20 rounded-full px-4 py-1.5 text-xs font-bold text-yellow-400 mb-2"
+            transition={{ duration: 0.8 }}
           >
-            Built for hackathons & events
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-primary via-yellow-300 to-primary bg-clip-text text-transparent animate-pulse">
+                VibeCheck
+              </span>
+              <br />
+              <span className="text-white">Your Hackathon</span>
+              <br />
+              <span className="text-white">Networking Wingman</span>
+            </h1>
           </motion.div>
 
-          <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-[0.9]">
-            Stop Awkward<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-yellow-300 to-amber-400">
-              Networking
-            </span>
-          </h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto"
+          >
+            Meet hackers who vibe with your energy. AI-powered icebreakers. Real connections. Zero cringe.
+          </motion.p>
 
-          <p className="text-base sm:text-xl text-white/50 leading-relaxed max-w-lg mx-auto">
-            Drop your vibe card, let AI find your perfect matches, and shoot your shot with a personalized icebreaker.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-6">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+          >
+            <Button
+              size="lg"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-lg rounded-2xl px-8 py-6 hover:scale-105 transition-transform"
               onClick={() => navigate('/enter')}
-              className="bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-10 py-4 rounded-2xl text-sm transition-colors shadow-lg shadow-yellow-400/20"
             >
-              Join a Room
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/enter?tab=create')}
-              className="border border-white/20 hover:border-white/40 hover:bg-white/5 text-white font-bold px-10 py-4 rounded-2xl text-sm transition-all"
+              <Zap className="w-5 h-5 mr-2" fill="currentColor" />
+              Start Vibing
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="font-bold text-lg rounded-2xl px-8 py-6 border-white/20 hover:border-primary hover:text-primary hover:scale-105 transition-all"
+              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Create a Room
-            </motion.button>
-          </div>
-
-          <p className="text-white/20 text-xs pt-2">No sign-up required. Works on any device.</p>
-        </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-            className="w-5 h-8 rounded-full border-2 border-white/20 flex items-start justify-center p-1"
-          >
-            <div className="w-1 h-2 rounded-full bg-white/40" />
+              See How It Works
+            </Button>
           </motion.div>
-        </motion.div>
-      </section>
-
-      {/* ── How it Works ── */}
-      <section className="py-24 px-4">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeUp}
-            className="text-center mb-16"
-          >
-            <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-3">How it works</p>
-            <h2 className="text-3xl sm:text-4xl font-black">Four steps to your next collab</h2>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {HOW_IT_WORKS.map((item, i) => (
-              <motion.div
-                key={item.step}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-50px' }}
-                custom={i}
-                variants={fadeUp}
-                className="relative bg-white/[0.03] border border-white/10 rounded-2xl p-6 space-y-3 hover:border-white/20 transition-colors"
-              >
-                <span className="text-4xl font-black text-yellow-400/20">{item.step}</span>
-                <p className="font-bold text-white text-lg">{item.title}</p>
-                <p className="text-white/40 text-sm leading-relaxed">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <section className="py-24 px-4 bg-white/[0.02]">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeUp}
-            className="text-center mb-16"
-          >
-            <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-3">Features</p>
-            <h2 className="text-3xl sm:text-4xl font-black">Everything you need to connect</h2>
-          </motion.div>
+      {/* How It Works */}
+      <section id="how-it-works" className="py-24 px-4 relative z-10">
+        <div className="container mx-auto max-w-6xl">
+          <AnimatedSection>
+            <h2 className="text-4xl md:text-5xl font-black text-center mb-16">
+              How It <span className="text-primary">Works</span>
+            </h2>
+          </AnimatedSection>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((f, i) => (
-              <motion.div
-                key={f.title}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-50px' }}
-                custom={i}
-                variants={fadeUp}
-                className="group bg-white/[0.03] border border-white/10 rounded-2xl p-6 space-y-4 hover:border-yellow-400/30 hover:bg-yellow-400/[0.03] transition-all duration-300"
-              >
-                <span className="text-4xl block group-hover:scale-110 transition-transform duration-300">{f.emoji}</span>
-                <p className="font-bold text-white">{f.title}</p>
-                <p className="text-white/40 text-sm leading-relaxed">{f.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── AI Personalities ── */}
-      <section className="py-24 px-4">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeUp}
-            className="text-center mb-16"
-          >
-            <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-3">AI Personalities</p>
-            <h2 className="text-3xl sm:text-4xl font-black">Choose your icebreaker vibe</h2>
-            <p className="text-white/40 mt-3 max-w-md mx-auto">Every icebreaker is AI-generated and tailored to both people's actual projects. Pick a personality that matches the moment.</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {PERSONALITIES.map((p, i) => (
-              <motion.div
-                key={p.key}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-50px' }}
-                custom={i}
-                variants={fadeUp}
-                className={`bg-gradient-to-br ${p.color} border rounded-2xl p-5 flex items-start gap-4`}
-              >
-                <span className="text-3xl shrink-0">{p.emoji}</span>
-                <div>
-                  <p className="font-bold text-white">{p.label}</p>
-                  <p className="text-white/50 text-sm mt-1">{p.desc}</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              { step: '01', icon: Users, title: 'Join or Create', description: 'Enter a room code or create your own hackathon space' },
+              { step: '02', icon: Sparkles, title: 'Build Your Card', description: 'Share your project, skills, and energy level with the squad' },
+              { step: '03', icon: Target, title: 'Find Your Vibe', description: 'Browse cards filtered by energy and interests' },
+              { step: '04', icon: MessageSquare, title: 'Shoot Your Shot', description: 'AI crafts your perfect icebreaker. Watch the magic happen.' },
+            ].map((item, i) => (
+              <AnimatedSection key={i} delay={i * 0.1}>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-primary/50 transition-all hover:scale-105 group">
+                  <div className="text-primary/30 font-black text-6xl mb-4">{item.step}</div>
+                  <item.icon className="w-10 h-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="font-bold text-xl mb-2">{item.title}</h3>
+                  <p className="text-muted-foreground">{item.description}</p>
                 </div>
-              </motion.div>
+              </AnimatedSection>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Stats / Social Proof ── */}
-      <section className="py-24 px-4 bg-white/[0.02]">
-        <div className="max-w-3xl mx-auto">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            variants={fadeUp}
-            className="text-center space-y-8"
-          >
-            <h2 className="text-3xl sm:text-4xl font-black">Built different</h2>
-            <div className="grid grid-cols-3 gap-6">
-              {[
-                { value: '0', label: 'Sign-ups required' },
-                { value: '<30s', label: 'To drop your card' },
-                { value: '5', label: 'AI personalities' },
-              ].map((s, i) => (
-                <motion.div
-                  key={s.label}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  custom={i}
-                  variants={fadeUp}
-                >
-                  <p className="text-3xl sm:text-4xl font-black text-yellow-400">{s.value}</p>
-                  <p className="text-white/40 text-xs sm:text-sm mt-1">{s.label}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+      {/* Feature Grid */}
+      <section className="py-24 px-4 relative z-10">
+        <div className="container mx-auto max-w-6xl">
+          <AnimatedSection>
+            <h2 className="text-4xl md:text-5xl font-black text-center mb-16">
+              Why <span className="text-primary">VibeCheck?</span>
+            </h2>
+          </AnimatedSection>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { icon: Zap, title: 'Instant Matches', description: 'Real-time notifications when someone vibes with you' },
+              { icon: Brain, title: 'AI Icebreakers', description: 'Five personalities to match any mood—from hype to philosophy' },
+              { icon: Target, title: 'Energy Filtering', description: 'Find hackers who match your current vibe (1-10)' },
+              { icon: Sparkles, title: 'Zero Setup', description: 'No accounts. No emails. Just a room code and you\'re in.' },
+              { icon: TrendingUp, title: 'Track Your Matches', description: 'Export contacts as CSV. Keep the connections alive post-event.' },
+              { icon: Users, title: 'Team Building', description: 'Perfect for finding co-founders, mentors, or late-night debug buddies' },
+            ].map((item, i) => (
+              <AnimatedSection key={i} delay={i * 0.1}>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 hover:border-primary/50 transition-all hover:scale-105 group">
+                  <item.icon className="w-12 h-12 text-primary mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="font-bold text-lg mb-2">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm">{item.description}</p>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── CTA ── */}
-      <section className="py-24 px-4">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-          variants={fadeUp}
-          className="max-w-2xl mx-auto text-center space-y-6"
-        >
-          <h2 className="text-3xl sm:text-5xl font-black leading-tight">
-            Ready to find<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-400">your people?</span>
-          </h2>
-          <p className="text-white/40 max-w-md mx-auto">
-            No app to download. No account to create. Just vibes.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/enter')}
-              className="bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-10 py-4 rounded-2xl text-sm transition-colors shadow-lg shadow-yellow-400/20"
-            >
-              Join a Room
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/enter?tab=create')}
-              className="border border-white/20 hover:border-white/40 hover:bg-white/5 text-white font-bold px-10 py-4 rounded-2xl text-sm transition-all"
-            >
-              Create a Room
-            </motion.button>
+      {/* AI Personality Showcase */}
+      <section className="py-24 px-4 relative z-10">
+        <div className="container mx-auto max-w-6xl">
+          <AnimatedSection>
+            <h2 className="text-4xl md:text-5xl font-black text-center mb-4">
+              Pick Your <span className="text-primary">Personality</span>
+            </h2>
+            <p className="text-center text-muted-foreground text-lg mb-16">
+              AI icebreakers tailored to your mood
+            </p>
+          </AnimatedSection>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {[
+              { icon: Flame, title: 'Hype', color: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30', example: 'YO! Your project idea is FIRE Let\'s collab and make this hackathon LEGENDARY!' },
+              { icon: TrendingDown, title: 'Roast', color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', example: 'Using PHP in 2026? Bold choice. Let\'s talk about why JavaScript exists.' },
+              { icon: Lightbulb, title: 'Philosopher', color: 'text-purple-500', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30', example: 'In the grand tapestry of code, what is a bug but a feature waiting to be understood?' },
+              { icon: Briefcase, title: 'Investor', color: 'text-green-500', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', example: 'I see potential here. What\'s your go-to-market strategy and projected TAM?' },
+            ].map((personality, i) => (
+              <AnimatedSection key={i} delay={i * 0.1}>
+                <div className={`${personality.bgColor} border ${personality.borderColor} rounded-2xl p-6 hover:scale-105 transition-all`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <personality.icon className={`w-8 h-8 ${personality.color}`} />
+                    <h3 className="font-bold text-xl">{personality.title}</h3>
+                  </div>
+                  <p className="text-muted-foreground italic">"{personality.example}"</p>
+                </div>
+              </AnimatedSection>
+            ))}
           </div>
-        </motion.div>
+        </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-white/5 py-8 px-4">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="font-black text-sm">Vibe<span className="text-yellow-400">Check</span></p>
-          <p className="text-white/20 text-xs">Built for hackathons. Powered by AI and good vibes.</p>
+      {/* Stats Bar */}
+      <section className="py-16 px-4 relative z-10">
+        <div className="container mx-auto max-w-6xl">
+          <AnimatedSection>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                {[
+                  { value: '0', label: 'Sign-ups Required' },
+                  { value: '<30s', label: 'To Drop Your Card' },
+                  { value: '5', label: 'AI Personalities' },
+                  { value: '95%', label: 'Match Success' },
+                ].map((stat, i) => (
+                  <div key={i}>
+                    <div className="text-4xl md:text-5xl font-black text-primary mb-2">{stat.value}</div>
+                    <div className="text-muted-foreground">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="py-24 px-4 relative z-10">
+        <div className="container mx-auto max-w-4xl text-center">
+          <AnimatedSection>
+            <h2 className="text-4xl md:text-6xl font-black mb-6">
+              Ready to <span className="text-primary">Vibe?</span>
+            </h2>
+            <p className="text-xl text-muted-foreground mb-8">
+              Join thousands of hackers making real connections at hackathons worldwide
+            </p>
+            <Button
+              size="lg"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold text-lg rounded-2xl px-12 py-8 hover:scale-105 transition-transform"
+              onClick={() => navigate('/enter')}
+            >
+              <Zap className="w-6 h-6 mr-2" fill="currentColor" />
+              Get Started Now
+            </Button>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 px-4 border-t border-white/10 relative z-10">
+        <div className="container mx-auto max-w-6xl text-center text-muted-foreground">
+          <p>Built with love for hackers, by hackers.</p>
         </div>
       </footer>
     </div>
