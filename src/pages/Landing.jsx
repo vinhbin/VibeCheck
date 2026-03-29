@@ -108,6 +108,42 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* App Showcase */}
+      <section className="py-24 px-4 relative z-10">
+        <div className="container mx-auto max-w-6xl">
+          <AnimatedSection>
+            <h2 className="text-4xl md:text-5xl font-black text-center mb-4">
+              See It In <span className="text-primary">Action</span>
+            </h2>
+            <p className="text-center text-muted-foreground text-lg mb-16">
+              Real screenshots from a live hackathon event
+            </p>
+          </AnimatedSection>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { src: '/screenshots/card.png', label: 'Build Your Vibe Card' },
+              { src: '/screenshots/Room.png', label: 'Browse The Room' },
+              { src: '/screenshots/Match.png', label: 'Get Matched' },
+              { src: '/screenshots/Match2.png', label: 'Track Your Matches' },
+            ].map((screenshot, i) => (
+              <AnimatedSection key={i} delay={i * 0.15}>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative rounded-3xl border-2 border-white/10 bg-white/5 overflow-hidden shadow-2xl shadow-primary/10 hover:border-primary/50 hover:scale-105 transition-all">
+                    <img
+                      src={screenshot.src}
+                      alt={screenshot.label}
+                      className="w-full h-auto"
+                    />
+                  </div>
+                  <p className="text-muted-foreground font-medium">{screenshot.label}</p>
+                </div>
+              </AnimatedSection>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
       <section id="how-it-works" className="py-24 px-4 relative z-10">
         <div className="container mx-auto max-w-6xl">
