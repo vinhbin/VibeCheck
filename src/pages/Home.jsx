@@ -244,7 +244,7 @@ export default function Home() {
                   <Label htmlFor="eventName">Event Name</Label>
                   <Input
                     id="eventName"
-                    placeholder="HackMIT 2026"
+                    placeholder="Tech Meetup 2026"
                     value={eventName}
                     onChange={(e) => { setEventName(e.target.value); clearError() }}
                     maxLength={80}

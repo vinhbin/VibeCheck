@@ -67,9 +67,9 @@ export default function Landing() {
                 VibeCheck
               </span>
               <br />
-              <span className="text-white">Your Hackathon</span>
+              <span className="text-white">Drop Your Card.</span>
               <br />
-              <span className="text-white">Networking Wingman</span>
+              <span className="text-white">Find Your People.</span>
             </h1>
           </motion.div>
 
@@ -79,7 +79,7 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto"
           >
-            Meet hackers who vibe with your energy. AI-powered icebreakers. Real connections. Zero cringe.
+            AI-powered icebreakers. Real connections. Zero cringe.
           </motion.p>
 
           <motion.div
@@ -116,7 +116,7 @@ export default function Landing() {
               See It In <span className="text-primary">Action</span>
             </h2>
             <p className="text-center text-muted-foreground text-lg mb-16">
-              Real screenshots from a live hackathon event
+              Real screenshots from a live networking event
             </p>
           </AnimatedSection>
 
@@ -155,7 +155,7 @@ export default function Landing() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { step: '01', icon: Users, title: 'Join or Create', description: 'Enter a room code or create your own hackathon space' },
+              { step: '01', icon: Users, title: 'Join or Create', description: 'Enter a room code or create your own event space' },
               { step: '02', icon: Sparkles, title: 'Build Your Card', description: 'Share your project, skills, and energy level with the squad' },
               { step: '03', icon: Target, title: 'Find Your Vibe', description: 'Browse cards filtered by energy and interests' },
               { step: '04', icon: MessageSquare, title: 'Shoot Your Shot', description: 'AI crafts your perfect icebreaker. Watch the magic happen.' },
@@ -217,7 +217,7 @@ export default function Landing() {
 
           <div className="grid md:grid-cols-2 gap-8">
             {[
-              { icon: Flame, title: 'Hype', color: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30', example: 'YO! Your project idea is FIRE Let\'s collab and make this hackathon LEGENDARY!' },
+              { icon: Flame, title: 'Hype', color: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30', example: 'YO! What you\'re working on is FIRE! Let\'s collab and make this LEGENDARY!' },
               { icon: TrendingDown, title: 'Roast', color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', example: 'Using PHP in 2026? Bold choice. Let\'s talk about why JavaScript exists.' },
               { icon: Lightbulb, title: 'Philosopher', color: 'text-purple-500', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30', example: 'In the grand tapestry of code, what is a bug but a feature waiting to be understood?' },
               { icon: Briefcase, title: 'Investor', color: 'text-green-500', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', example: 'I see potential here. What\'s your go-to-market strategy and projected TAM?' },
@@ -267,7 +267,7 @@ export default function Landing() {
               Ready to <span className="text-primary">Vibe?</span>
             </h2>
             <p className="text-xl text-muted-foreground mb-8">
-              Join thousands of hackers making real connections at hackathons worldwide
+              Join thousands of people making real connections at events worldwide
             </p>
             <Button
               size="lg"

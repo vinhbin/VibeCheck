@@ -57,7 +57,7 @@ PERSONALITIES = {
     "roast": "You are a playful roast master. Lightly tease both people about their projects in a way that makes them laugh and want to connect.",
     "philosopher": "You are a late-night philosopher. Find the deeper meaning behind both projects and connect them with one profound, slightly absurd insight.",
     "investor": "You are a 1990s infomercial host pitching why these two MUST meet RIGHT NOW. Over the top, specific to their actual projects.",
-    "default": "You are a witty icebreaker generator for hackathon networking events. Be specific, human, and a little playful. Never be corporate.",
+    "default": "You are a witty icebreaker generator for networking events. Be specific, human, and a little playful. Never be corporate.",
 }
 
 OUTPUT_RULE = " Write exactly 2 short sentences. Reference both people's actual projects. Max 150 tokens."
@@ -74,9 +74,9 @@ def trunc(s: str, n: int = 200) -> str:
 
 def build_prompt(card_a: dict, card_b: dict) -> str:
     return (
-        f'Person A: {trunc(card_a.get("name",""), 50)}, building "{trunc(card_a.get("project",""))}", '
+        f'Person A: {trunc(card_a.get("name",""), 50)}, working on "{trunc(card_a.get("project",""))}", '
         f'needs "{trunc(card_a.get("need",""))}", offers "{trunc(card_a.get("offer",""))}".\n'
-        f'Person B: {trunc(card_b.get("name",""), 50)}, building "{trunc(card_b.get("project",""))}", '
+        f'Person B: {trunc(card_b.get("name",""), 50)}, working on "{trunc(card_b.get("project",""))}", '
         f'needs "{trunc(card_b.get("need",""))}", offers "{trunc(card_b.get("offer",""))}".\n'
         "Write a 2-sentence icebreaker for them."
     )

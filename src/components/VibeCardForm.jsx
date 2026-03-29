@@ -74,7 +74,7 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
     const e = {}
     if (!form.name.trim())            e.name    = 'Name is required'
     if (!/^\d{4}$/.test(form.pin))    e.pin     = 'Must be exactly 4 digits'
-    if (!form.project.trim())         e.project = 'What are you building?'
+    if (!form.project.trim())         e.project = 'What are you working on?'
     if (form.need.trim().length < 10) e.need    = `${10 - form.need.trim().length} more chars needed`
     if (form.offer.trim().length < 10) e.offer  = `${10 - form.offer.trim().length} more chars needed`
     return e
@@ -264,7 +264,7 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
 
           {/* Project Description */}
           <div>
-            <Label htmlFor="project">What are you building?</Label>
+            <Label htmlFor="project">What are you working on?</Label>
             <Textarea
               id="project"
               placeholder="AI-powered recipe app that turns your fridge into a personal chef"
@@ -325,8 +325,8 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
               className="mt-4"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-2">
-              <span>Chill</span>
-              <span>HYPED</span>
+              <span>Low-key</span>
+              <span>High energy</span>
             </div>
           </div>
 

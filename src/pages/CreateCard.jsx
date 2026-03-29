@@ -159,7 +159,7 @@ export default function CreateCard() {
           <p className="text-muted-foreground">
             {isEditMode
               ? 'Update your info — your matches will see the new version.'
-              : "Tell people what you're building and what you need."}
+              : "Tell people what you do and what you're looking for."}
           </p>
         </div>
 

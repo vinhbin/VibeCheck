@@ -60,7 +60,7 @@ const PERSONALITIES = {
   roast:       'You are a playful roast master. Lightly tease both people about their projects in a way that makes them laugh and want to connect.',
   philosopher: 'You are a late-night philosopher. Find the deeper meaning behind both projects and connect them with one profound, slightly absurd insight.',
   investor:    'You are a 1990s infomercial host pitching why these two MUST meet RIGHT NOW. Over the top, specific to their actual projects.',
-  default:     'You are a witty icebreaker generator for hackathon networking events. Be specific, human, and a little playful. Never be corporate.',
+  default:     'You are a witty icebreaker generator for networking events. Be specific, human, and a little playful. Never be corporate.',
 }
 
 const VALID_PERSONALITIES = new Set(Object.keys(PERSONALITIES))
@@ -78,8 +78,8 @@ const trunc = (s, n = 200) => String(s ?? '').slice(0, n).replace(/[\x00-\x1F\x7
 
 function buildPrompt(cardA, cardB) {
   return (
-    `Person A: ${trunc(cardA.name, 50)}, building "${trunc(cardA.project)}", needs "${trunc(cardA.need)}", offers "${trunc(cardA.offer)}".\n` +
-    `Person B: ${trunc(cardB.name, 50)}, building "${trunc(cardB.project)}", needs "${trunc(cardB.need)}", offers "${trunc(cardB.offer)}".\n` +
+    `Person A: ${trunc(cardA.name, 50)}, working on "${trunc(cardA.project)}", needs "${trunc(cardA.need)}", offers "${trunc(cardA.offer)}".\n` +
+    `Person B: ${trunc(cardB.name, 50)}, working on "${trunc(cardB.project)}", needs "${trunc(cardB.need)}", offers "${trunc(cardB.offer)}".\n` +
     `Write a 2-sentence icebreaker for them.`
   )
 }

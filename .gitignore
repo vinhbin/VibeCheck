@@ -27,3 +27,8 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Planning docs
+VIBECHECK_AGENT_V2.md
+VIBECHECK_AGENT_SAFE.md
+NETWORKING_UPDATES.md
