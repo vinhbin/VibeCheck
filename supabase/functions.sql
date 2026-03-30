@@ -9,6 +9,8 @@ CREATE TABLE events (
   name        TEXT        NOT NULL,
   code        TEXT        UNIQUE NOT NULL,
   max_cards   INT         DEFAULT 200,
+  description TEXT,
+  extras      JSONB       DEFAULT '{"looking_for": true}',
   expires_at  TIMESTAMPTZ DEFAULT NOW() + INTERVAL '24 hours',
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -23,6 +25,9 @@ CREATE TABLE vibe_cards (
   need            TEXT        NOT NULL CHECK (char_length(need) >= 10),
   offer           TEXT        NOT NULL CHECK (char_length(offer) >= 10),
   energy          INT         DEFAULT 5 CHECK (energy BETWEEN 1 AND 10),
+  linkedin        TEXT,
+  instagram       TEXT,
+  looking_for     JSONB       DEFAULT '[]',
   need_embedding  vector(768),
   offer_embedding vector(768),
   created_at      TIMESTAMPTZ DEFAULT NOW()
@@ -67,6 +72,7 @@ ALTER TABLE failed_embeds ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "events_read"    ON events      FOR SELECT USING (true);
 CREATE POLICY "events_insert"  ON events      FOR INSERT WITH CHECK (true);
+CREATE POLICY "events_update"  ON events      FOR UPDATE USING (true);
 
 CREATE POLICY "cards_read"     ON vibe_cards  FOR SELECT USING (true);
 CREATE POLICY "cards_insert"   ON vibe_cards  FOR INSERT WITH CHECK (true);
