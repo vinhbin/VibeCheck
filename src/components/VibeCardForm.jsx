@@ -8,54 +8,65 @@ import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { Slider } from './ui/slider'
 import { Avatar } from './Avatar'
+import { useEventExtras } from '../hooks/useEventExtras'
 
-export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
+const LOOKING_FOR_TAGS = [
+  'co-founder', 'mentor', 'hiring', 'job seeking',
+  'collaborator', 'investor', 'friends', 'learning',
+]
+
+function normalizeLinkedin(val) {
+  if (!val) return null
+  const trimmed = val.trim()
+  const match = trimmed.match(/linkedin\.com\/in\/([^/?#\s]+)/i)
+  if (match) return match[1]
+  return trimmed.replace(/^[@/]+/, '') || null
+}
+
+export function VibeCardForm({ onSubmit, initial = {}, submitting = false, eventId = null }) {
+  const extras = useEventExtras(eventId)
+
   const [form, setForm] = useState({
-    name:     initial.name     ?? '',
-    emoji:    initial.emoji    ?? '👋',
-    pin:      initial.pin      ?? '',
-    project:  initial.project  ?? '',
-    need:     initial.need     ?? '',
-    offer:    initial.offer    ?? '',
-    energy:    initial.energy    ?? 5,
-    linkedin:  initial.linkedin  ?? '',
-    photo_url: initial.photo_url ?? '',
+    name:                   initial.name                   ?? '',
+    emoji:                  initial.emoji                  ?? '👋',
+    pin:                    initial.pin                    ?? '',
+    project:                initial.project                ?? '',
+    need:                   initial.need                   ?? '',
+    offer:                  initial.offer                  ?? '',
+    energy:                 initial.energy                 ?? 5,
+    linkedin:               initial.linkedin               ?? '',
+    instagram:              initial.instagram              ?? '',
+    looking_for:            initial.looking_for            ?? [],
+    roles:                  initial.roles                  ?? [],
+    photo_url:              initial.photo_url              ?? '',
+    favorite_song:          initial.favorite_song          ?? '',
+    custom_prompt_response: initial.custom_prompt_response ?? '',
   })
-  const [errors, setErrors]       = useState({})
-  const [emojiOpen, setEmojiOpen] = useState(false)
+  const [errors, setErrors]         = useState({})
+  const [emojiOpen, setEmojiOpen]   = useState(false)
   const [avatarMode, setAvatarMode] = useState(initial.photo_url ? 'photo' : 'emoji')
-  const [photoTab, setPhotoTab]   = useState('upload') // 'upload' or 'url'
-  const [uploading, setUploading] = useState(false)
+  const [photoTab, setPhotoTab]     = useState('upload')
+  const [uploading, setUploading]   = useState(false)
   const fileInputRef = useRef(null)
 
   async function handleFileUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
-
-    // Validate file
     if (!file.type.startsWith('image/')) return
     if (file.size > 5 * 1024 * 1024) {
       setErrors(prev => ({ ...prev, photo: 'Photo must be under 5MB' }))
       return
     }
-
     setUploading(true)
     setErrors(prev => ({ ...prev, photo: undefined }))
-
     try {
       const ext = file.name.split('.').pop()
       const path = `avatars/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-
       const { error: uploadErr } = await supabase.storage
         .from('avatars')
         .upload(path, file, { contentType: file.type, upsert: true })
-
       if (uploadErr) throw uploadErr
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(path)
-
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
       set('photo_url', publicUrl)
     } catch {
       setErrors(prev => ({ ...prev, photo: 'Upload failed — try pasting a URL instead' }))
@@ -70,13 +81,34 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
     setErrors(e => ({ ...e, [field]: undefined }))
   }
 
+  function toggleLookingFor(tag) {
+    setForm(f => {
+      const current = f.looking_for ?? []
+      if (current.includes(tag)) return { ...f, looking_for: current.filter(t => t !== tag) }
+      if (current.length >= 3) return f
+      return { ...f, looking_for: [...current, tag] }
+    })
+  }
+
+  function toggleRole(tag) {
+    setForm(f => {
+      const current = f.roles ?? []
+      if (current.includes(tag)) return { ...f, roles: current.filter(t => t !== tag) }
+      if (current.length >= 3) return f
+      return { ...f, roles: [...current, tag] }
+    })
+  }
+
   function validate() {
     const e = {}
-    if (!form.name.trim())            e.name    = 'Name is required'
-    if (!/^\d{4}$/.test(form.pin))    e.pin     = 'Must be exactly 4 digits'
-    if (!form.project.trim())         e.project = 'What are you working on?'
-    if (form.need.trim().length < 10) e.need    = `${10 - form.need.trim().length} more chars needed`
-    if (form.offer.trim().length < 10) e.offer  = `${10 - form.offer.trim().length} more chars needed`
+    if (!form.name.trim())             e.name    = 'Name is required'
+    if (!/^\d{4}$/.test(form.pin))     e.pin     = 'Must be exactly 4 digits'
+    if (!form.project.trim())          e.project = 'What are you working on?'
+    if (form.need.trim().length < 10)  e.need    = `${10 - form.need.trim().length} more chars needed`
+    if (form.offer.trim().length < 10) e.offer   = `${10 - form.offer.trim().length} more chars needed`
+    if (form.instagram && !/^[a-zA-Z0-9._]+$/.test(form.instagram)) {
+      e.instagram = 'Only letters, numbers, . and _ allowed'
+    }
     return e
   }
 
@@ -85,15 +117,20 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     onSubmit({
-      name:     form.name.trim(),
-      emoji:    form.emoji,
-      pin:      form.pin,
-      project:  form.project.trim(),
-      need:     form.need.trim(),
-      offer:    form.offer.trim(),
-      energy:    form.energy,
-      linkedin:  form.linkedin.trim() || null,
-      photo_url: form.photo_url.trim() || null,
+      name:                   form.name.trim(),
+      emoji:                  form.emoji,
+      pin:                    form.pin,
+      project:                form.project.trim(),
+      need:                   form.need.trim(),
+      offer:                  form.offer.trim(),
+      energy:                 form.energy,
+      linkedin:               normalizeLinkedin(form.linkedin),
+      instagram:              form.instagram.trim() || null,
+      looking_for:            form.looking_for,
+      roles:                  form.roles,
+      photo_url:              form.photo_url.trim() || null,
+      favorite_song:          form.favorite_song.trim() || null,
+      custom_prompt_response: form.custom_prompt_response.trim() || null,
     })
   }
 
@@ -166,7 +203,6 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
 
             {avatarMode === 'photo' && (
               <div className="space-y-3">
-                {/* Sub-tabs: Upload / URL */}
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -335,7 +371,7 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
             <Label htmlFor="linkedin">LinkedIn (optional)</Label>
             <Input
               id="linkedin"
-              placeholder="https://linkedin.com/in/yourname"
+              placeholder="username or linkedin.com/in/yourname"
               value={form.linkedin}
               onChange={(e) => set('linkedin', e.target.value)}
               maxLength={200}
@@ -343,6 +379,117 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
             />
             <p className="text-xs text-muted-foreground mt-1">So your matches can connect with you</p>
           </div>
+
+          {/* Instagram */}
+          <div>
+            <Label htmlFor="instagram">Instagram (optional)</Label>
+            <div className="relative mt-2">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">@</span>
+              <Input
+                id="instagram"
+                placeholder="yourhandle"
+                value={form.instagram}
+                onChange={(e) => set('instagram', e.target.value.replace(/^@/, '').replace(/[^a-zA-Z0-9._]/g, ''))}
+                maxLength={30}
+                className="pl-7 bg-white/5 border-white/10 rounded-2xl"
+              />
+            </div>
+            {errors.instagram && <p className="text-destructive text-sm mt-2">{errors.instagram}</p>}
+          </div>
+
+          {/* Looking For Tags */}
+          {extras.looking_for && (
+            <div>
+              <Label>
+                Looking For{' '}
+                <span className="text-muted-foreground font-normal">(pick up to 3)</span>
+              </Label>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {LOOKING_FOR_TAGS.map(tag => {
+                  const selected = form.looking_for.includes(tag)
+                  const disabled = !selected && form.looking_for.length >= 3
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => !disabled && toggleLookingFor(tag)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                        selected
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : disabled
+                          ? 'border-white/10 text-muted-foreground opacity-40 cursor-not-allowed'
+                          : 'border-white/20 text-foreground hover:border-primary/50 hover:bg-white/5'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* I Am — Roles (supply signal, always shown) */}
+          <div>
+            <Label>
+              I am...{' '}
+              <span className="text-muted-foreground font-normal">(pick up to 3)</span>
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1 mb-3">Helps others find you when they're looking for what you bring</p>
+            <div className="flex flex-wrap gap-2">
+              {LOOKING_FOR_TAGS.map(tag => {
+                const selected = form.roles.includes(tag)
+                const disabled = !selected && form.roles.length >= 3
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => !disabled && toggleRole(tag)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                      selected
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                        : disabled
+                        ? 'border-white/10 text-muted-foreground opacity-40 cursor-not-allowed'
+                        : 'border-white/20 text-foreground hover:border-emerald-500/40 hover:bg-white/5'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Favorite Song (organizer-enabled) */}
+          {extras.favorite_song && (
+            <div>
+              <Label htmlFor="favorite_song">Favorite Song (optional)</Label>
+              <Input
+                id="favorite_song"
+                placeholder="Artist — Song Title"
+                value={form.favorite_song}
+                onChange={(e) => set('favorite_song', e.target.value)}
+                maxLength={100}
+                className="mt-2 bg-white/5 border-white/10 rounded-2xl"
+              />
+            </div>
+          )}
+
+          {/* Custom Prompt (organizer-defined) */}
+          {extras.custom_prompt && (
+            <div>
+              <Label htmlFor="custom_prompt_response">{extras.custom_prompt}</Label>
+              <Textarea
+                id="custom_prompt_response"
+                placeholder="Your answer..."
+                value={form.custom_prompt_response}
+                onChange={(e) => set('custom_prompt_response', e.target.value)}
+                rows={2}
+                maxLength={300}
+                className="mt-2 bg-white/5 border-white/10 rounded-2xl resize-none"
+              />
+            </div>
+          )}
 
           <Button
             type="submit"
@@ -385,6 +532,30 @@ export function VibeCardForm({ onSubmit, initial = {}, submitting = false }) {
                     <p className="text-sm text-muted-foreground mb-1">Offer:</p>
                     <p className="text-sm">{form.offer}</p>
                   </div>
+                )}
+
+                {form.looking_for?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {form.looking_for.map(tag => (
+                      <span key={tag} className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-medium">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {form.roles?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {form.roles.map(tag => (
+                      <span key={tag} className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {form.instagram && (
+                  <p className="text-xs text-muted-foreground">@{form.instagram}</p>
                 )}
 
                 <div className="pt-3">

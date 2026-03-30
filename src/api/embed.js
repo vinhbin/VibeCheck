@@ -5,9 +5,18 @@ export async function embedCard(card, { isRetry = false } = {}) {
     // Stagger to avoid rate-limit spikes when many cards are created at once
     await new Promise(r => setTimeout(r, Math.random() * 2000))
 
+    // need + looking_for → query vector (what you're searching for)
+    // offer + roles     → index vector (what you bring / what you are)
+    const lookingForSuffix = card.looking_for?.length
+      ? ` Looking for: ${card.looking_for.join(', ')}`
+      : ''
+    const rolesSuffix = card.roles?.length
+      ? ` I am: ${card.roles.join(', ')}`
+      : ''
+
     const [needVec, offerVec] = await Promise.all([
-      fetchEmbedding(card.need),
-      fetchEmbedding(card.offer),
+      fetchEmbedding(card.need + lookingForSuffix),
+      fetchEmbedding(card.offer + rolesSuffix),
     ])
 
     await supabase

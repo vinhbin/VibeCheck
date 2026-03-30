@@ -11,7 +11,7 @@ import { SuggestedFeed } from '../components/SuggestedFeed'
 import { MatchModal } from '../components/MatchModal'
 import { ShootYourShot } from '../components/ShootYourShot'
 import { RoomQR } from '../components/RoomQR'
-import { EnergyFilter } from '../components/EnergyFilter'
+import { RoomFilters } from '../components/EnergyFilter'
 import { Button } from '../components/ui/button'
 import { Avatar } from '../components/Avatar'
 
@@ -27,6 +27,7 @@ export default function Room() {
   const [toastMsg,    setToastMsg]    = useState(null)
   const [showQR,      setShowQR]      = useState(false)
   const [minEnergy,   setMinEnergy]   = useState(1)
+  const [tagFilter,   setTagFilter]   = useState(null)
 
   const activeMatch = matchQueue[0] ?? null
 
@@ -39,11 +40,16 @@ export default function Room() {
     showToast(`${senderName} wants to connect!`)
   })
 
-  // AI-suggested cards (pgvector)
-  const suggestionIds = useSuggested(myCard, eventId, cards.length)
+  // AI-suggested cards (pgvector) — pass full cards list for tag-boost re-ranking
+  const suggestionIds = useSuggested(myCard, eventId, cards.length, cards)
 
-  // Filtered card list
-  const visibleCards = cards.filter(c => c.id === myCardId || c.energy >= minEnergy)
+  // Filtered card list (energy + optional tag)
+  const visibleCards = cards.filter(c => {
+    if (c.id === myCardId) return true
+    if (c.energy < minEnergy) return false
+    if (tagFilter && !(c.roles ?? []).includes(tagFilter)) return false
+    return true
+  })
 
   function showToast(msg) {
     setToastMsg(msg)
@@ -58,22 +64,26 @@ export default function Room() {
     navigate('/')
   }
 
-  // Resolve event details for QR and header
-  const [eventCode, setEventCode]         = useState(null)
-  const [eventName, setEventName]         = useState(null)
-  const [discordUrl, setDiscordUrl]       = useState(null)
-  const [orgLinkedin, setOrgLinkedin]     = useState(null)
+  // Resolve event details for QR, header, description, and extras config
+  const [eventCode, setEventCode]           = useState(null)
+  const [eventName, setEventName]           = useState(null)
+  const [discordUrl, setDiscordUrl]         = useState(null)
+  const [orgLinkedin, setOrgLinkedin]       = useState(null)
+  const [eventDescription, setEventDescription] = useState(null)
+  const [eventExtras, setEventExtras]       = useState({ looking_for: true, favorite_song: false, custom_prompt: null })
   if (!eventCode && myCard) {
     supabase
       .from('events')
-      .select('code, name, discord_url, organizer_linkedin')
+      .select('code, name, discord_url, organizer_linkedin, description, extras')
       .eq('id', eventId)
       .single()
       .then(({ data }) => {
-        if (data?.code) setEventCode(data.code)
-        if (data?.name) setEventName(data.name)
-        if (data?.discord_url) setDiscordUrl(data.discord_url)
+        if (data?.code)               setEventCode(data.code)
+        if (data?.name)               setEventName(data.name)
+        if (data?.discord_url)        setDiscordUrl(data.discord_url)
         if (data?.organizer_linkedin) setOrgLinkedin(data.organizer_linkedin)
+        if (data?.description)        setEventDescription(data.description)
+        if (data?.extras)             setEventExtras(data.extras)
       })
   }
 
@@ -167,10 +177,24 @@ export default function Room() {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div className="container mx-auto max-w-6xl space-y-6">
-          {/* Energy Filter */}
+
+          {/* Event description banner */}
+          {eventDescription && (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-1">About this event</p>
+              <p className="text-sm">{eventDescription}</p>
+            </div>
+          )}
+
+          {/* Filters */}
           {!loading && cards.length > 1 && (
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <EnergyFilter value={minEnergy} onChange={setMinEnergy} />
+              <RoomFilters
+                value={minEnergy}
+                onChange={setMinEnergy}
+                tagFilter={tagFilter}
+                onTagChange={setTagFilter}
+              />
             </div>
           )}
 
@@ -180,6 +204,7 @@ export default function Room() {
               suggestionIds={suggestionIds}
               allCards={cards}
               onShoot={setTargetCard}
+              extras={eventExtras}
             />
           )}
 
@@ -187,7 +212,7 @@ export default function Room() {
           {!loading && cards.length > 0 && (
             <h3 className="font-bold text-lg flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              {visibleCards.length === 0 ? 'No one matches your energy filter' : 'In the Room'}
+              {visibleCards.length === 0 ? 'No one matches your filters' : 'In the Room'}
             </h3>
           )}
 
@@ -196,6 +221,7 @@ export default function Room() {
             cards={visibleCards}
             loading={loading}
             onShoot={setTargetCard}
+            extras={eventExtras}
           />
 
           {/* Empty state */}

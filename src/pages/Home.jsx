@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
+import { Textarea } from '../components/ui/textarea'
 
 // ---------------------------------------------------------------------------
 // Helpers (exported so CreateCard can reuse joinEvent)
@@ -17,12 +18,14 @@ function generateRoomCode() {
   return Math.random().toString(36).padEnd(9, '0').slice(2, 8).toUpperCase()
 }
 
-export async function createEvent(name, { discord_url, organizer_linkedin } = {}) {
+export async function createEvent(name, { discord_url, organizer_linkedin, description, extras } = {}) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const code = generateRoomCode()
     const row = { name, code }
     if (discord_url) row.discord_url = discord_url
     if (organizer_linkedin) row.organizer_linkedin = organizer_linkedin
+    if (description) row.description = description
+    if (extras) row.extras = extras
     const { data, error } = await supabase
       .from('events')
       .insert(row)
@@ -103,9 +106,14 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState(urlCode ?? '')
 
   // Create state
-  const [eventName, setEventName]       = useState('')
-  const [discordUrl, setDiscordUrl]     = useState('')
-  const [orgLinkedin, setOrgLinkedin]   = useState('')
+  const [eventName, setEventName]             = useState('')
+  const [discordUrl, setDiscordUrl]           = useState('')
+  const [orgLinkedin, setOrgLinkedin]         = useState('')
+  const [description, setDescription]         = useState('')
+  const [extrasLookingFor, setExtrasLookingFor]         = useState(true)
+  const [extrasFavoriteSong, setExtrasFavoriteSong]     = useState(false)
+  const [extrasCustomPrompt, setExtrasCustomPrompt]     = useState(false)
+  const [customPromptText, setCustomPromptText]         = useState('')
 
   // Reclaim state
   const [reclaimCode, setReclaimCode] = useState('')
@@ -135,9 +143,16 @@ export default function Home() {
     clearError()
     setBusy(true)
     try {
+      const extras = {
+        looking_for:   extrasLookingFor,
+        favorite_song: extrasFavoriteSong,
+        custom_prompt: extrasCustomPrompt ? (customPromptText.trim() || null) : null,
+      }
       const event = await createEvent(eventName.trim(), {
-        discord_url: discordUrl.trim() || undefined,
+        discord_url:        discordUrl.trim() || undefined,
         organizer_linkedin: orgLinkedin.trim() || undefined,
+        description:        description.trim() || undefined,
+        extras,
       })
       toast.success(`Room ${event.code} created!`)
       navigate(`/create/${event.id}`, { state: { roomCode: event.code } })
@@ -273,6 +288,63 @@ export default function Home() {
                     maxLength={200}
                     className="mt-2 bg-white/5 border-white/10 rounded-2xl"
                   />
+                </div>
+                <div>
+                  <Label htmlFor="description">Event Description (optional)</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="What's this event about? Include agenda, theme, or anything attendees should know."
+                    value={description}
+                    onChange={(e) => { setDescription(e.target.value); clearError() }}
+                    rows={3}
+                    maxLength={500}
+                    className="mt-2 bg-white/5 border-white/10 rounded-2xl resize-none"
+                  />
+                  {description.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">{description.length}/500</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Card Fields</Label>
+                  <div className="mt-3 space-y-3 bg-white/5 border border-white/10 rounded-2xl p-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={extrasLookingFor}
+                        onChange={(e) => setExtrasLookingFor(e.target.checked)}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm">"Looking for" tags</span>
+                      <span className="text-xs text-muted-foreground ml-auto">on by default</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={extrasFavoriteSong}
+                        onChange={(e) => setExtrasFavoriteSong(e.target.checked)}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm">Favorite song</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={extrasCustomPrompt}
+                        onChange={(e) => setExtrasCustomPrompt(e.target.checked)}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm">Custom prompt</span>
+                    </label>
+                    {extrasCustomPrompt && (
+                      <Input
+                        placeholder={`e.g. "What's your hot take?"`}
+                        value={customPromptText}
+                        onChange={(e) => setCustomPromptText(e.target.value)}
+                        maxLength={100}
+                        className="bg-white/5 border-white/10 rounded-xl"
+                      />
+                    )}
+                  </div>
                 </div>
                 <Button
                   type="submit"

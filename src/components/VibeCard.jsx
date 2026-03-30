@@ -17,11 +17,16 @@ function getRank(energy = 5) {
   return String(energy)
 }
 
-export function VibeCard({ card, compact = false, onShoot }) {
+export function VibeCard({ card, compact = false, onShoot, extras = {} }) {
   const myCardId = safeGet('my_card_id')
   const isMyCard = card.id === myCardId
   const { symbol, color } = getSuit(card.energy)
   const rank = getRank(card.energy)
+
+  // Normalize linkedin to a username so the link is always consistent
+  const linkedinHandle = card.linkedin
+    ? card.linkedin.match(/linkedin\.com\/in\/([^/?#\s]+)/i)?.[1] ?? card.linkedin
+    : null
 
   return (
     <div className="relative bg-white/5 border border-white/10 rounded-2xl overflow-hidden flex flex-col hover:bg-white/10 hover:border-primary/50 transition-all">
@@ -66,6 +71,36 @@ export function VibeCard({ card, compact = false, onShoot }) {
           </>
         )}
 
+        {/* Organizer-enabled optional fields */}
+        {extras.favorite_song && card.favorite_song && (
+          <p className="text-xs text-muted-foreground mt-1">🎵 {card.favorite_song}</p>
+        )}
+        {extras.custom_prompt && card.custom_prompt_response && (
+          <p className="text-xs text-muted-foreground italic mt-1">"{card.custom_prompt_response}"</p>
+        )}
+
+        {/* Looking For chips (demand) */}
+        {card.looking_for?.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1 mt-1">
+            {card.looking_for.map(tag => (
+              <span key={tag} className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-medium">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Roles chips (supply) */}
+        {card.roles?.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1 mt-1">
+            {card.roles.map(tag => (
+              <span key={tag} className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Energy bar */}
         <div className="w-full pt-2">
           <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
@@ -77,8 +112,33 @@ export function VibeCard({ card, compact = false, onShoot }) {
         </div>
       </div>
 
-      {/* Action */}
-      <div className="px-4 pb-5 mt-auto">
+      {/* Social links + Action */}
+      <div className="px-4 pb-5 mt-auto space-y-3">
+        {(card.instagram || linkedinHandle) && (
+          <div className="flex justify-center gap-4">
+            {card.instagram && (
+              <a
+                href={`https://instagram.com/${card.instagram}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-pink-400 transition"
+              >
+                @{card.instagram}
+              </a>
+            )}
+            {linkedinHandle && (
+              <a
+                href={`https://linkedin.com/in/${linkedinHandle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-[#0A66C2] transition"
+              >
+                LinkedIn
+              </a>
+            )}
+          </div>
+        )}
+
         {isMyCard ? (
           <p className="w-full text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground py-2">
             That&apos;s you

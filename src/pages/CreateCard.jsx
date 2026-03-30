@@ -61,11 +61,24 @@ export default function CreateCard() {
   const isEditMode   = location.pathname.endsWith('/edit')
   const roomCode     = location.state?.roomCode ?? null
 
-  const [submitting, setSubmitting]     = useState(false)
-  const [error, setError]               = useState(null)
-  const [existingCard, setExistingCard] = useState(null)
-  const [loading, setLoading]           = useState(isEditMode)
-  const [pinVerified, setPinVerified]   = useState(false)
+  const [submitting, setSubmitting]           = useState(false)
+  const [error, setError]                     = useState(null)
+  const [existingCard, setExistingCard]       = useState(null)
+  const [loading, setLoading]                 = useState(isEditMode)
+  const [pinVerified, setPinVerified]         = useState(false)
+  const [eventDescription, setEventDescription] = useState(null)
+
+  // Fetch event description to show context before the form
+  useEffect(() => {
+    supabase
+      .from('events')
+      .select('description')
+      .eq('id', eventId)
+      .single()
+      .then(({ data }) => {
+        if (data?.description) setEventDescription(data.description)
+      })
+  }, [eventId])
 
   // In edit mode, fetch the existing card once
   useEffect(() => {
@@ -163,6 +176,14 @@ export default function CreateCard() {
           </p>
         </div>
 
+        {/* Event description banner — shown to all attendees */}
+        {eventDescription && (
+          <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 px-6 py-4">
+            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-1">About this event</p>
+            <p className="text-sm">{eventDescription}</p>
+          </div>
+        )}
+
         {/* Room code banner — shown to the creator */}
         {roomCode && (
           <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/10 px-6 py-4 flex items-center justify-between">
@@ -197,6 +218,7 @@ export default function CreateCard() {
             onSubmit={isEditMode ? handleEdit : handleCreate}
             initial={existingCard ?? {}}
             submitting={submitting}
+            eventId={eventId}
           />
         )}
       </div>

@@ -1,7 +1,7 @@
 import { VibeCard } from './VibeCard'
 import { CardSkeleton } from './CardSkeleton'
 
-export function MatchFeed({ cards, loading, onShoot }) {
+export function MatchFeed({ cards, loading, onShoot, extras }) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -13,7 +13,7 @@ export function MatchFeed({ cards, loading, onShoot }) {
   return (
     <div className="space-y-3">
       {cards.map(card => (
-        <VibeCard key={card.id} card={card} onShoot={onShoot} />
+        <VibeCard key={card.id} card={card} onShoot={onShoot} extras={extras} />
       ))}
     </div>
   )

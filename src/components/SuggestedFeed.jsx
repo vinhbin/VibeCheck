@@ -1,7 +1,7 @@
 import { Sparkles } from 'lucide-react'
 import { VibeCard } from './VibeCard'
 
-export function SuggestedFeed({ suggestionIds, allCards, onShoot }) {
+export function SuggestedFeed({ suggestionIds, allCards, onShoot, extras }) {
   const suggested = allCards.filter(c => suggestionIds.includes(c.id))
   if (suggested.length === 0) return null
 
@@ -14,7 +14,7 @@ export function SuggestedFeed({ suggestionIds, allCards, onShoot }) {
       <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4">
         {suggested.map(card => (
           <div key={card.id} className="flex-shrink-0 w-72">
-            <VibeCard card={card} onShoot={onShoot} />
+            <VibeCard card={card} onShoot={onShoot} extras={extras} />
           </div>
         ))}
       </div>

@@ -1,3 +1,4 @@
+
 # VibeCheck — Networking Event Updates Plan
 
 ## Phase 1: Quick Wins
@@ -143,6 +144,25 @@
 ### Column Type Note (§1.3)
 - `TEXT[]` for `looking_for` works but the codebase already uses JSONB elsewhere (match snapshots). Consider JSONB for consistency and easier client-side querying. Either works — just be intentional.
 
+### Missing Columns for Organizer Extras (§1.4) ✅ RESOLVED
+- ~~`favorite_song` and `custom_prompt_response` columns were never added to `vibe_cards` in the Phase 1 migration.~~
+- Fixed in `supabase/migrations/002_phase1_addons.sql`. Submit payload in `VibeCardForm.jsx` now includes both fields.
+- **Note:** `favorite_song` and `custom_prompt_response` are **display and personality only** — no effect on matching, embeddings, or ranking.
+
+### Roles Field — Missing Complement to `looking_for` (§1.3) ✅ RESOLVED
+- ~~`looking_for` captures demand but there was no supply signal.~~
+- Fixed in `supabase/migrations/002_phase1_addons.sql` (`roles JSONB DEFAULT '[]'`).
+- `embed.js` now appends `" I am: ..."` to offer text → `offer_embedding` encodes what you bring
+- `useSuggested` scores three cross-signals: `looking_for ↔ looking_for`, `my looking_for ↔ their roles`, `my roles ↔ their looking_for`
+- `VibeCardForm.jsx` shows "I am..." chips (green, same tag list, max 3, always visible)
+- `VibeCard.jsx` displays roles chips in green, distinct from looking_for (blue/primary)
+
+### How Matching Uses the Fields (Reference)
+- **`need` + `looking_for` tags** → combined into `need_embedding` (your search query vector)
+- **`offer` + `roles` tags** *(roles pending)* → combined into `offer_embedding` (what gets indexed and searched against)
+- The `match_cards` RPC compares your `need_embedding` against all other cards' `offer_embedding` via cosine similarity (HNSW index)
+- `favorite_song`, `custom_prompt_response` → display only, no embedding, no ranking effect
+
 ---
 
 ## 4-Person Task Split
@@ -197,11 +217,11 @@ Each file has **one owner**. If another person needs a change in a file they don
 
 **Files:** `src/hooks/`, `src/api/`, `src/lib/`
 
-**Phase 1:**
-- Update `useRoom.js` — include `linkedin`, `instagram`, `looking_for` in card fetches (these columns come from P1's migration)
-- New hook: `useEventExtras(eventId)` — fetches event `extras` JSONB, returns which optional fields are enabled, re-fetches on Realtime UPDATE to `events`. Consumed by P3's `VibeCardForm.jsx` and P4's `VibeCard.jsx`
-- Update `useSuggested.js` — factor `looking_for` overlap into suggestion ranking (boost cards with matching tags)
-- Update `embed.js` — include `looking_for` tags in the text sent for embedding so semantic matching accounts for intent
+**Phase 1:** ✅ COMPLETED
+- ✅ Update `useRoom.js` — include `linkedin`, `instagram`, `looking_for` in card fetches (these columns come from P1's migration)
+- ✅ New hook: `useEventExtras(eventId)` — fetches event `extras` JSONB, returns which optional fields are enabled, re-fetches on Realtime UPDATE to `events`. Consumed by P3's `VibeCardForm.jsx` and P4's `VibeCard.jsx`
+- ✅ Update `useSuggested.js` — factor `looking_for` overlap into suggestion ranking (boost cards with matching tags)
+- ✅ Update `embed.js` — include `looking_for` tags in the text sent for embedding so semantic matching accounts for intent
 
 **Phase 2:**
 - Simplify mutual match detection: a match with `status = 'accepted'` already means mutual (initiator shot → target accepted). No complex bidirectional check needed — just filter `status === 'accepted'`
@@ -225,18 +245,18 @@ Each file has **one owner**. If another person needs a change in a file they don
 
 **Files:** `src/pages/Home.jsx`, `src/pages/CreateCard.jsx`, `src/components/VibeCardForm.jsx`, `src/App.jsx`, new pages
 
-**Phase 1:**
-- Update `VibeCardForm.jsx`:
-  - Add optional `instagram` text input (validate: strip `@` prefix if entered, alphanumeric + `.` + `_` only)
-  - Add optional `linkedin` text input (accept username or full URL, normalize to username)
-  - Add `looking_for` tag chips — multi-select, max 3, from predefined list: `co-founder`, `mentor`, `hiring`, `job seeking`, `collaborator`, `investor`, `friends`, `learning`
-  - Conditionally render fields based on `useEventExtras` (from P2) — only show `looking_for` / `favorite_song` / custom prompt if event config enables them
+**Phase 1:** ✅ COMPLETED
+- ✅ Update `VibeCardForm.jsx`:
+  - ✅ Add optional `instagram` text input (validate: strip `@` prefix if entered, alphanumeric + `.` + `_` only)
+  - ✅ Add optional `linkedin` text input (accept username or full URL, normalize to username)
+  - ✅ Add `looking_for` tag chips — multi-select, max 3, from predefined list: `co-founder`, `mentor`, `hiring`, `job seeking`, `collaborator`, `investor`, `friends`, `learning`
+  - ✅ Conditionally render fields based on `useEventExtras` (from P2) — only show `looking_for` / `favorite_song` / custom prompt if event config enables them
   - **Blocked by:** P1 migration (columns must exist), P2 `useEventExtras` hook
-- Update `Home.jsx` — create event flow:
-  - Add optional `description` textarea (max 500 chars)
-  - Add extras toggle panel: checkboxes for `favorite_song`, `looking_for` (default ON), `custom_prompt` (with text input for the prompt question)
-  - Pass `description` + `extras` JSONB to event INSERT
-- Update `CreateCard.jsx` — display event description on card creation screen so attendees see context before filling out their card
+- ✅ Update `Home.jsx` — create event flow:
+  - ✅ Add optional `description` textarea (max 500 chars)
+  - ✅ Add extras toggle panel: checkboxes for `favorite_song`, `looking_for` (default ON), `custom_prompt` (with text input for the prompt question)
+  - ✅ Pass `description` + `extras` JSONB to event INSERT
+- ✅ Update `CreateCard.jsx` — display event description on card creation screen so attendees see context before filling out their card
 
 **Phase 2:**
 - Add optional `email` input to `VibeCardForm.jsx` — small helper text: "Private — only used for post-event recap"
@@ -275,19 +295,20 @@ Each file has **one owner**. If another person needs a change in a file they don
 
 **Files:** `src/pages/Room.jsx`, `src/pages/Matches.jsx`, `src/components/VibeCard.jsx`, `src/components/MatchModal.jsx`, `src/components/ShootYourShot.jsx`, `src/components/EnergyFilter.jsx`, `src/components/RoomQR.jsx`, `src/components/MatchFeed.jsx`, `src/components/SuggestedFeed.jsx`
 
-**Phase 1:**
-- Update `ShootYourShot.jsx` — update snapshot construction in the upsert to include `linkedin`, `instagram`, `looking_for` from the card objects (these fields are already on the card objects via P2's `useRoom.js` fetch). No structural change needed — snapshots are full card objects, so new columns flow through automatically as long as `useRoom.js` selects them
-- Update `Matches.jsx` — update `exportVCard` and `exportCSV` to include LinkedIn URL + Instagram URL from snapshot data. Add `URL:https://linkedin.com/in/${card.linkedin}` to vCard, add `LinkedIn,Instagram` columns to CSV header
-- Update `VibeCard.jsx`:
-  - Display `looking_for` tags as colored chips below the card content
-  - Display `instagram` as clickable link → `instagram.com/{handle}` (only if present)
-  - Display `linkedin` as clickable link → `linkedin.com/in/{handle}` (only if present)
-  - Display `favorite_song` and custom prompt response if present (read event extras via prop from Room)
-- Update `Room.jsx`:
-  - New filter: tag filter dropdown/chips alongside existing energy filter — filter cards by `looking_for` tag
-  - Display event `description` as a banner/header in the room
-  - Pass event extras config to `VibeCard` components so they know which optional fields to display
-- Update `EnergyFilter.jsx` → rename to `RoomFilters.jsx` or keep separate — add tag filter component
+**Phase 1:** ✅ COMPLETED
+- ✅ Update `ShootYourShot.jsx` — no structural change needed; snapshots are full card objects, new columns flow through automatically
+- ✅ Update `Matches.jsx` — `exportVCard` adds LinkedIn + Instagram `URL:` lines; `exportCSV` adds LinkedIn/Instagram URL columns; fixed MatchCard LinkedIn href for normalized usernames
+- ✅ Update `VibeCard.jsx`:
+  - ✅ Display `looking_for` tags as colored chips below the card content
+  - ✅ Display `instagram` as clickable link → `instagram.com/{handle}` (only if present)
+  - ✅ Display `linkedin` as clickable link → `linkedin.com/in/{handle}` (only if present)
+  - ✅ Display `favorite_song` and custom prompt response if present (read event extras via `extras` prop from Room)
+- ✅ Update `Room.jsx`:
+  - ✅ New tag filter chips alongside existing energy filter — filter cards by `looking_for` tag
+  - ✅ Display event `description` as a banner in main content area
+  - ✅ Pass event `extras` config to `VibeCard` via `MatchFeed`/`SuggestedFeed`
+  - ✅ Pass full `cards` array to `useSuggested` for tag-boost re-ranking
+- ✅ Update `EnergyFilter.jsx` — renamed export to `RoomFilters`, added tag filter section; `MatchFeed` and `SuggestedFeed` updated to pass `extras` through to `VibeCard`
 - **Blocked by:** P1 migration (columns), P2 `useRoom.js` update (data availability)
 
 **Phase 2:**
